@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Camera, Search, Plus, X, Trash2, AlertTriangle, Check,
-  Image as ImageIcon, LogOut, ClipboardList,
+  Image as ImageIcon, LogOut, ClipboardList, Sparkles, Loader2,
 } from "lucide-react";
 import {
   loadUnits, upsertUnit, deleteUnit, newUnitId,
@@ -10,6 +10,7 @@ import {
 } from "./lib/db.js";
 import { EQUIPMENT_TYPES, OPTION_LISTS } from "./lib/constants.js";
 import { supabase } from "./lib/supabaseClient.js";
+import { extractFromPhoto } from "./lib/extractNameplate.js";
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -562,6 +563,7 @@ function UnitModal({ type, unit, onClose, onSaved, onDeleted, showToast }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [unitTagError, setUnitTagError] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -616,6 +618,30 @@ function UnitModal({ type, unit, onClose, onSaved, onDeleted, showToast }) {
 
   function removePhoto(photoId) {
     setPendingPhotos((prev) => prev.filter((p) => p.id !== photoId));
+  }
+
+  async function handleAIExtract() {
+    if (pendingPhotos.length === 0) return;
+    const aiFields = type.assetFields.filter((f) => f.aiReadable);
+    if (aiFields.length === 0) return;
+    setAiLoading(true);
+    setPhotoError(null);
+    try {
+      const extracted = await extractFromPhoto(pendingPhotos[0].dataUrl, aiFields, type.singular);
+      setForm((f) => {
+        const next = { ...f };
+        aiFields.forEach((field) => {
+          if (extracted[field.name] && !next[field.name]) next[field.name] = extracted[field.name];
+        });
+        return next;
+      });
+      showToast("Filled in fields from the photo — check them over", "success");
+    } catch (err) {
+      console.error("AI extract failed", err);
+      setPhotoError("Couldn't read the nameplate automatically. Try a clearer, well-lit photo, or enter the fields by hand.");
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   async function handleSave() {
@@ -702,6 +728,17 @@ function UnitModal({ type, unit, onClose, onSaved, onDeleted, showToast }) {
                 <span className="el-photo-placeholder-text">Add photo</span>
               </label>
             </div>
+            {pendingPhotos.length > 0 && !photoLoading && type.assetFields.some((f) => f.aiReadable) && (
+              <button className="el-ai-btn" onClick={handleAIExtract} disabled={aiLoading}>
+                {aiLoading ? <Loader2 size={13} className="el-spin" /> : <Sparkles size={13} />}
+                {aiLoading ? "Reading nameplate…" : "Read Nameplate with AI"}
+              </button>
+            )}
+            {pendingPhotos.length > 1 && (
+              <div className="el-banner el-banner-neutral">
+                The first photo is treated as the nameplate for AI reading — reorder isn't supported, so remove and re-add if you want a different one first.
+              </div>
+            )}
             {photoError && <div className="el-banner el-banner-danger"><AlertTriangle size={14} /> {photoError}</div>}
           </div>
 
@@ -1048,6 +1085,11 @@ const CSS = `
 
 .el-banner { margin-top: 8px; display: flex; align-items: flex-start; gap: 8px; padding: 9px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; line-height: 1.4; }
 .el-banner-danger { background: var(--el-danger-soft); color: var(--el-danger); }
+.el-banner-neutral { background: var(--el-chip-bg); color: var(--el-slate-soft); }
+
+.el-ai-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--el-accent-deep); background: none; border: 1px solid var(--el-accent); border-radius: 6px; padding: 6px 10px; }
+.el-ai-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.el-spin { animation: el-spin 0.7s linear infinite; }
 
 .el-btn { border-radius: 8px; font-size: 14px; font-weight: 700; padding: 11px; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; }
 .el-btn-inline { flex: none; padding: 9px 16px; }

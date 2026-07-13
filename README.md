@@ -69,14 +69,51 @@ cp .env.example .env
 Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` with the values from
 step 1.
 
-## 3. Run it locally
+## 3. Deploy the AI nameplate-extraction function
+
+The "Read Nameplate with AI" button (in the Add/Edit form, once a photo is
+attached) calls a Supabase Edge Function
+(`supabase/functions/extract-nameplate`) that holds a Gemini API key
+server-side — it's never shipped to the browser. Gemini (not Anthropic) was
+chosen here specifically because its Flash models have a genuinely free tier
+(roughly 15 requests/min, 1,500/day as of 2026) with no billing setup
+required — get a key at [Google AI Studio](https://aistudio.google.com/apikey)
+with just a Google account.
+
+Unlike a fixed nameplate layout, this function is field-list driven: the
+client sends whichever fields are marked `aiReadable: true` on the current
+equipment type in [`src/lib/constants.js`](src/lib/constants.js) (pump specs
+for fire pumps, engine/fuel specs for generators), and the prompt is built
+from that list — so adding an `aiReadable` field there is enough to have the
+AI extract it too, no edge function changes needed.
+
+**Option A — Supabase CLI** (if you have it installed and logged in):
+```
+supabase link --project-ref your-project-ref
+supabase secrets set GEMINI_API_KEY=AIza...
+supabase functions deploy extract-nameplate --no-verify-jwt
+```
+`--no-verify-jwt` keeps the function reachable with just the anon key — the
+app's own login screen is what actually gates access, not this function (the
+function also independently checks for a valid session as defense in depth).
+
+**Option B — Dashboard**: Project → Edge Functions → Create a new function
+named `extract-nameplate`, paste in the contents of
+[`supabase/functions/extract-nameplate/index.ts`](supabase/functions/extract-nameplate/index.ts),
+then add `GEMINI_API_KEY` under Edge Functions → Secrets. Set the function's
+"Enforce JWT verification" toggle off.
+
+Without this step, everything else in the app works — only "Read Nameplate
+with AI" will fail (with a toast saying so; manual data entry is unaffected).
+
+## 4. Run it locally
 
 ```
 npm install
 npm run dev
 ```
 
-## 4. Build & deploy
+## 5. Build & deploy
 
 ```
 npm run build
@@ -96,4 +133,9 @@ add, edit, or delete any unit or log entry, and there's no public sign-up
 Each equipment type's asset fields and log fields are declared in
 [`src/lib/constants.js`](src/lib/constants.js) (`EQUIPMENT_TYPES`) — the form
 UI is generated from that config, so adding a field there plus the matching
-column in a new migration is normally enough; no UI code changes needed.
+column in a new migration is normally enough; no UI code changes needed. Mark
+a field `aiReadable: true` if it's actual nameplate data (manufacturer,
+model, serial, ratings) — those are the fields "Read Nameplate with AI" will
+try to fill in. Leave permit/administrative fields (unit tag, location,
+install date, PTO number, etc.) unmarked since they aren't printed on the
+equipment itself.
