@@ -5,9 +5,96 @@ export const LOCATION_OPTIONS = [
 
 export const TEST_RESULT_OPTIONS = ["Pass", "Fail"];
 
-// Overall visit result on a checklist-based log entry (fire pumps). Per-item
-// results within the checklist use CHECK_OPTIONS below.
+// Overall visit result on a checklist-based log entry (fire pumps, generators).
+// Per-item results within the checklist use CHECK_OPTIONS below.
 export const CHECK_OPTIONS = ["Pass", "Fail", "N/A"];
+
+export const YES_NO_OPTIONS = ["Yes", "No"];
+export const OPERATION_REASON_OPTIONS = ["Test", "Emergency", "Other"];
+
+// Nameplate + air-permit fields for a diesel generator, matching the header
+// box on "Emergency Engine Operating Log Template.xlsx" (a Bay Area Air
+// District permit-compliance log combined with an NFPA 110 maintenance
+// checklist) plus the usual manufacturer/model/serial identification.
+const DIESEL_GENERATOR_ASSET_FIELDS = [
+  { name: "unitTag", label: "Unit Tag", required: true },
+  { name: "location", label: "Property", datalist: "LOCATION_OPTIONS" },
+  { name: "ptoNumber", label: "Equipment # (PTO No.)" },
+  { name: "k12Within500ft", label: "K-12 School/Daycare Within 500'", type: "select", options: "YES_NO_OPTIONS" },
+  { name: "maxAnnualMaintenanceHours", label: "Max Annual Maintenance/Testing Hours" },
+  { name: "maxAnnualTotalOperationHours", label: "Max Annual Total Operation Hours" },
+  { name: "maxMonthlyMaintenanceHours", label: "Max Monthly Maintenance/Testing Hours" },
+  { name: "manufacturer", label: "Manufacturer" },
+  { name: "model", label: "Model" },
+  { name: "serial", label: "Serial", mono: true },
+  { name: "engineManufacturer", label: "Engine Manufacturer" },
+  { name: "engineModel", label: "Engine Model" },
+  { name: "kwRating", label: "kW Rating" },
+  { name: "voltage", label: "Voltage" },
+  { name: "fuelTankCapacityGal", label: "Fuel Tank Capacity (gal)" },
+  { name: "dateInstalled", label: "Date Installed", type: "date" },
+  { name: "notes", label: "Notes", multiline: true, span: 2 },
+];
+
+// Top-level fields on a generator log entry. Item 1 ("Record Date of Test /
+// Operation") and item 8 ("Test Performed By") from the source spreadsheet
+// are folded into `logDate` and `technician` here rather than duplicated in
+// the checklist below.
+const DIESEL_GENERATOR_LOG_FIELDS = [
+  { name: "logDate", label: "Date", type: "date", required: true },
+  { name: "technician", label: "Test Performed By" },
+  { name: "overallResult", label: "Overall Result", type: "select", options: "TEST_RESULT_OPTIONS" },
+  { name: "notes", label: "Deficiencies / Comments", multiline: true, span: 2 },
+];
+
+// Checklist items transcribed from "Emergency Engine Operating Log
+// Template.xlsx" (Emergency Engine Log-Final sheet), items 2-7 and 9-43 —
+// item 1 (date) and item 8 (technician) are covered by the top-level fields
+// above. Each item's `ref` holds the sheet's "RANGE" column (the acceptable
+// value/range a technician checks the reading against).
+export const DIESEL_GENERATOR_CHECKLIST = [
+  { id: "2", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Run Start Time", ref: "Start time, am/pm", valueType: "reading", unit: "" },
+  { id: "3", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Stop Time", ref: "End time, am/pm", valueType: "reading", unit: "" },
+  { id: "4", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Reason for Operation", ref: "Test, Emergency, Other", valueType: "select", options: "OPERATION_REASON_OPTIONS" },
+  { id: "5", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Prestart Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", unit: "hrs" },
+  { id: "6", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Post Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", unit: "hrs" },
+  { id: "7", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Subtract Difference Between Post and Pre Run-Time Reading", ref: "Run time difference", valueType: "reading", unit: "hrs" },
+  { id: "9", section: "Generator Maintenance Checklist", type: "I", label: "Check Crankcase Engine Oil Level", ref: "As indicated on dipstick", valueType: "check" },
+  { id: "10", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Level - Main Tank", ref: "Min 2/3 full", valueType: "check" },
+  { id: "11", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Level - Day Tank (If Applicable)", ref: "Min 2/3 full", valueType: "check" },
+  { id: "12", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Pump Operation (If Applicable)", ref: "Operational", valueType: "check" },
+  { id: "13", section: "Generator Maintenance Checklist", type: "I", label: "Check Cooling System (Radiator) Water Level", ref: "Full", valueType: "check" },
+  { id: "14", section: "Generator Maintenance Checklist", type: "I", label: "Verify Water Jacket Heater Operation", ref: "Operational", valueType: "check" },
+  { id: "15", section: "Generator Maintenance Checklist", type: "I", label: "Inspect Hoses and Belts for Cracking and Wear", ref: "Good/Fair/Poor", valueType: "check" },
+  { id: "16", section: "Generator Maintenance Checklist", type: "I", label: "Inspect Electrical Control Panel", ref: "No burn marks/loose wires", valueType: "check" },
+  { id: "17", section: "Generator Maintenance Checklist", type: "I", label: "Inspect Battery Terminals", ref: "No corrosion", valueType: "check" },
+  { id: "18", section: "Generator Maintenance Checklist", type: "I", label: "Check Battery Electrolyte Level", ref: "Full", valueType: "check" },
+  { id: "19", section: "Generator Maintenance Checklist", type: "I", label: "Check Battery Specific Gravity (Monthly)", ref: "1.250 - 1.750", valueType: "reading", unit: "SG" },
+  { id: "20", section: "Generator Maintenance Checklist", type: "I", label: "Record Battery Voltage (12VDC or 24VDC)", ref: "13.3-13.6 / 26.6-27.2", valueType: "reading", unit: "VDC" },
+  { id: "21", section: "Generator Maintenance Checklist", type: "I", label: "Check Battery Indicator Lamps", ref: "On", valueType: "check" },
+  { id: "22", section: "Generator Maintenance Checklist", type: "I", label: "Check Alarm Pilot Indicator Lamps", ref: "Off (test)", valueType: "check" },
+  { id: "23", section: "Generator Maintenance Checklist", type: "T", label: "Transfer Switch Test - Monthly (NFPA 110), Run Under Load for 30 Min", ref: "Auto-start by tripping ATS breaker", valueType: "check" },
+  { id: "24", section: "Generator Maintenance Checklist", type: "I", label: "Transfer Time After Power Loss", ref: "0-10 seconds", valueType: "reading", unit: "sec" },
+  { id: "25", section: "Generator Maintenance Checklist", type: "I", label: "Estimated Cranking Time", ref: "0-10 seconds", valueType: "reading", unit: "sec" },
+  { id: "26", section: "Generator Maintenance Checklist", type: "I", label: "Estimated Seconds to Reach Running Speed", ref: "0-10 seconds", valueType: "reading", unit: "sec" },
+  { id: "27", section: "Generator Maintenance Checklist", type: "I", label: "Record Hertz", ref: "60", valueType: "reading", unit: "Hz" },
+  { id: "28", section: "Generator Maintenance Checklist", type: "I", label: "Record Voltage - Phase 1/2/3", ref: "480/480/480", valueType: "reading", unit: "V" },
+  { id: "29", section: "Generator Maintenance Checklist", type: "I", label: "Record Amperage - Phase 1/2/3", ref: "00/00/00", valueType: "reading", unit: "A" },
+  { id: "30", section: "Generator Maintenance Checklist", type: "I", label: "Water Temperature Reading", ref: "170°F - 190°F", valueType: "reading", unit: "°F" },
+  { id: "31", section: "Generator Maintenance Checklist", type: "I", label: "Record Oil Pressure Reading", ref: "40-70 PSI", valueType: "reading", unit: "PSI" },
+  { id: "32", section: "Generator Maintenance Checklist", type: "I", label: "Record Fuel Pressure Reading", ref: "Not below 30 PSI", valueType: "reading", unit: "PSI" },
+  { id: "33", section: "Generator Maintenance Checklist", type: "I", label: "Record Motor RPM's", ref: "", valueType: "reading", unit: "RPM" },
+  { id: "34", section: "Generator Maintenance Checklist", type: "I", label: "Verify Adequate Air-Flow Through Radiator", ref: "No blockage in fins", valueType: "check" },
+  { id: "35", section: "Generator Maintenance Checklist", type: "I", label: "Check for Unusual Noises, Heat, and Vibrations", ref: "None", valueType: "check" },
+  { id: "36", section: "Generator Maintenance Checklist", type: "I", label: "Check Excessive Exhaust Smoke", ref: "Not \"thick black\"", valueType: "check" },
+  { id: "37", section: "Generator Maintenance Checklist", type: "I", label: "Check Exhaust System for Leaks or Damage", ref: "Good/Fair/Poor", valueType: "check" },
+  { id: "38", section: "Generator Maintenance Checklist", type: "I", label: "Drain Exhaust Condensate Trap (If Applicable)", ref: "Yes/No", valueType: "check" },
+  { id: "39", section: "Generator Maintenance Checklist", type: "I", label: "Inspect for Leaks of Any Kind", ref: "No water, oil, or fuel leaks", valueType: "check" },
+  { id: "40", section: "Generator Maintenance Checklist", type: "I", label: "Diesel Particulate Filter Back-Pressure (If Applicable)", ref: "", valueType: "reading", unit: "PSI" },
+  { id: "41", section: "Generator Maintenance Checklist", type: "I", label: "Transfer Time After Power Restore", ref: "0-10 mins", valueType: "reading", unit: "min" },
+  { id: "42", section: "Generator Maintenance Checklist", type: "I", label: "General Shutdown Check", ref: "No problems - OK", valueType: "check" },
+  { id: "43", section: "Generator Maintenance Checklist", type: "M", label: "Reset Controls to Automatic Position", ref: "\"Auto\"", valueType: "check" },
+];
 
 // Fire pump asset fields mirror the "Pump and Driver Information" box on the
 // California CCR Title 19 / NFPA 25 inspection forms (AES 5.1 diesel weekly,
@@ -197,31 +284,11 @@ export const EQUIPMENT_TYPES = [
     label: "Diesel Generators",
     singular: "Generator",
     logTable: "diesel_generator_logs",
-    assetFields: [
-      { name: "unitTag", label: "Unit Tag", required: true },
-      { name: "location", label: "Location", datalist: "LOCATION_OPTIONS" },
-      { name: "manufacturer", label: "Manufacturer" },
-      { name: "model", label: "Model" },
-      { name: "serial", label: "Serial", mono: true },
-      { name: "engineManufacturer", label: "Engine Manufacturer" },
-      { name: "engineModel", label: "Engine Model" },
-      { name: "kwRating", label: "kW Rating" },
-      { name: "voltage", label: "Voltage" },
-      { name: "fuelTankCapacityGal", label: "Fuel Tank Capacity (gal)" },
-      { name: "dateInstalled", label: "Date Installed", type: "date" },
-      { name: "notes", label: "Notes", multiline: true, span: 2 },
-    ],
-    logFields: [
-      { name: "logDate", label: "Date", type: "date", required: true },
-      { name: "technician", label: "Technician" },
-      { name: "runHours", label: "Run Hours" },
-      { name: "fuelLevelPct", label: "Fuel Level (%)" },
-      { name: "oilLevelOk", label: "Oil Level OK", type: "checkbox" },
-      { name: "coolantLevelOk", label: "Coolant Level OK", type: "checkbox" },
-      { name: "batteryVoltage", label: "Battery Voltage" },
-      { name: "testResult", label: "Test Result", type: "select", options: "TEST_RESULT_OPTIONS" },
-      { name: "notes", label: "Notes", multiline: true, span: 2 },
-    ],
+    frequencyLabel: "Bi-Weekly",
+    formNo: "Emergency Engine Operating Log",
+    assetFields: DIESEL_GENERATOR_ASSET_FIELDS,
+    logFields: DIESEL_GENERATOR_LOG_FIELDS,
+    checklist: DIESEL_GENERATOR_CHECKLIST,
   },
   {
     key: "diesel_fire_pumps",
@@ -247,4 +314,7 @@ export const EQUIPMENT_TYPES = [
   },
 ];
 
-export const OPTION_LISTS = { LOCATION_OPTIONS, TEST_RESULT_OPTIONS, CHECK_OPTIONS };
+export const OPTION_LISTS = {
+  LOCATION_OPTIONS, TEST_RESULT_OPTIONS, CHECK_OPTIONS,
+  YES_NO_OPTIONS, OPERATION_REASON_OPTIONS,
+};

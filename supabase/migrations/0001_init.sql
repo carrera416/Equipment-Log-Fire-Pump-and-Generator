@@ -3,10 +3,18 @@
 -- test/run log table (FK'd back to the asset). Locked to signed-in users
 -- from the start (no public signup — accounts are admin-created).
 
+-- Asset fields mirror the header box on "Emergency Engine Operating Log
+-- Template.xlsx" (Bay Area Air District permit-compliance log + NFPA 110
+-- maintenance checklist) plus the usual manufacturer/model/serial ID.
 create table if not exists diesel_generators (
   id text primary key,
   unit_tag text not null default '',
   location text default '',
+  pto_number text default '',
+  k12_within500ft text default '',
+  max_annual_maintenance_hours text default '',
+  max_annual_total_operation_hours text default '',
+  max_monthly_maintenance_hours text default '',
   manufacturer text default '',
   model text default '',
   serial text default '',
@@ -24,17 +32,16 @@ create table if not exists diesel_generators (
   date_updated timestamptz not null default now()
 );
 
+-- Log entries store the full itemized checklist (per the source
+-- spreadsheet, items 2-7 and 9-43) as jsonb keyed by item id — see
+-- DIESEL_GENERATOR_CHECKLIST in src/lib/constants.js for the item list.
 create table if not exists diesel_generator_logs (
   id text primary key,
   unit_id text not null references diesel_generators(id) on delete cascade,
   log_date text not null default '',
   technician text default '',
-  run_hours text default '',
-  fuel_level_pct text default '',
-  oil_level_ok boolean,
-  coolant_level_ok boolean,
-  battery_voltage text default '',
-  test_result text default '',
+  overall_result text default '',
+  responses jsonb not null default '{}',
   notes text default '',
   created_at timestamptz not null default now()
 );

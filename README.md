@@ -9,8 +9,11 @@ Supabase dashboard, no public self-signup) can read/write the shared log.
 
 Three equipment types, each with its own table and its own log history:
 
-- **Diesel Generators** — nameplate + engine data, log entries track run
-  hours, fuel level, oil/coolant checks, battery voltage, pass/fail.
+- **Diesel Generators** — nameplate + air-permit fields (PTO number, K-12
+  proximity, max annual/monthly hours) matching "Emergency Engine Operating
+  Log Template.xlsx" (a Bay Area Air District permit-compliance log combined
+  with an NFPA 110 maintenance checklist), log entries are the 41-item
+  checklist from that sheet.
 - **Diesel Fire Pumps** — pump/driver nameplate data matching California CCR
   Title 19 / NFPA 25 Form AES 5.1, log entries are the full 68-item weekly
   inspection/test/maintenance checklist from that form.
@@ -18,16 +21,20 @@ Three equipment types, each with its own table and its own log history:
   Form AES 5.3, log entries are the full 37-item monthly checklist from that
   form.
 
-The two fire pump checklists (`DIESEL_FIRE_PUMP_CHECKLIST` and
-`ELECTRIC_FIRE_PUMP_CHECKLIST` in
-[`src/lib/constants.js`](src/lib/constants.js)) are transcribed item-by-item
-from the official forms, including each item's number, I/T/M type, and NFPA
-25 code reference, so entries can be cross-checked against a paper/PDF copy.
-Each log entry stores its checklist answers as a single JSON blob rather
-than one column per item — see `responses` on `diesel_fire_pump_logs` /
-`electric_fire_pump_logs` in the migration. The itemized "Deficiencies and
-Comments" sub-table from the paper form (with Item/Date/Riser columns) is
-simplified here to one free-text "Deficiencies / Comments" field per visit.
+The three checklists (`DIESEL_GENERATOR_CHECKLIST`, `DIESEL_FIRE_PUMP_CHECKLIST`,
+`ELECTRIC_FIRE_PUMP_CHECKLIST` in [`src/lib/constants.js`](src/lib/constants.js))
+are transcribed item-by-item from the source documents, including each
+item's number/type and its reference or acceptable-range text, so entries
+can be cross-checked against the original form. For the generator checklist,
+items 1 ("Record Date of Test / Operation") and 8 ("Test Performed By") from
+the spreadsheet are folded into the log entry's top-level Date and
+Technician fields rather than duplicated as checklist rows — everything else
+(items 2-7, 9-43) is there. Each log entry stores its checklist answers as a
+single JSON blob rather than one column per item — see `responses` on
+`diesel_generator_logs` / `diesel_fire_pump_logs` / `electric_fire_pump_logs`
+in the migration. The fire pump forms' itemized "Deficiencies and Comments"
+sub-table (with Item/Date/Riser columns) is simplified here to one free-text
+"Deficiencies / Comments" field per visit.
 
 ## 1. Create a Supabase project
 
