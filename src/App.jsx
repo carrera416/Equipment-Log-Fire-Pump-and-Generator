@@ -67,7 +67,13 @@ function emptyLogForm(type) {
     else if (field.name === "logDate") f[field.name] = todayStr();
     else f[field.name] = "";
   }
+  if (type.checklist) f.responses = {};
   return f;
+}
+
+function countChecklistFails(responses) {
+  if (!responses) return 0;
+  return Object.values(responses).filter((v) => v === "Fail").length;
 }
 
 function Toast({ toast }) {
@@ -139,6 +145,84 @@ function FormField({ field, value, onChange, error }) {
         onChange={(e) => onChange(e.target.value)}
       />
     </Field>
+  );
+}
+
+function groupChecklist(checklist) {
+  const sections = [];
+  for (const item of checklist) {
+    let section = sections.find((s) => s.name === item.section);
+    if (!section) { section = { name: item.section, items: [] }; sections.push(section); }
+    section.items.push(item);
+  }
+  return sections;
+}
+
+// Renders the itemized NFPA 25 / CCR Title 19 checklist for one log entry —
+// "check" items get a Pass/Fail/N/A select, "reading" items a numeric input
+// with the form's unit suffixed.
+function ChecklistFields({ checklist, responses, onChange }) {
+  const sections = groupChecklist(checklist);
+  return (
+    <div className="el-checklist">
+      {sections.map((section) => (
+        <div className="el-checklist-section" key={section.name}>
+          <div className="el-checklist-section-title">{section.name}</div>
+          {section.items.map((item) => (
+            <div className="el-checklist-row" key={item.id}>
+              <div className="el-checklist-row-label">
+                <span className="el-checklist-item-id">{item.id}</span>
+                <span className="el-checklist-item-type">{item.type}</span>
+                <span>{item.label}</span>
+                {item.ref && <span className="el-checklist-item-ref">{item.ref}</span>}
+              </div>
+              <div className="el-checklist-row-input">
+                {item.valueType === "check" ? (
+                  <select
+                    className="el-field-input el-checklist-select"
+                    value={responses[item.id] || ""}
+                    onChange={(e) => onChange(item.id, e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {OPTION_LISTS.CHECK_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <div className="el-checklist-reading">
+                    <input
+                      className="el-field-input"
+                      type="text"
+                      inputMode="decimal"
+                      value={responses[item.id] || ""}
+                      onChange={(e) => onChange(item.id, e.target.value)}
+                    />
+                    {item.unit && <span className="el-checklist-unit">{item.unit}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Read-only expansion of a saved log entry's checklist responses.
+function ChecklistView({ checklist, responses }) {
+  const answered = checklist.filter((item) => (responses[item.id] || "").toString().trim() !== "");
+  if (answered.length === 0) return <div className="el-empty-sub">No checklist items recorded.</div>;
+  return (
+    <div className="el-checklist-view">
+      {answered.map((item) => (
+        <div className="el-checklist-view-row" key={item.id}>
+          <span className="el-checklist-item-id">{item.id}</span>
+          <span className="el-checklist-view-label">{item.label}</span>
+          <span className={`el-checklist-view-value${responses[item.id] === "Fail" ? " el-checklist-view-fail" : ""}`}>
+            {responses[item.id]}{item.unit ? ` ${item.unit}` : ""}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -668,6 +752,7 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
   const [logFormOpen, setLogFormOpen] = useState(false);
   const [logForm, setLogForm] = useState(() => emptyLogForm(type));
   const [logSaving, setLogSaving] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState(null);
 
   const refreshLogs = useCallback(async () => {
     setLogsLoading(true);
@@ -680,6 +765,10 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
 
   function setLogField(name, value) {
     setLogForm((f) => ({ ...f, [name]: value }));
+  }
+
+  function setResponse(itemId, value) {
+    setLogForm((f) => ({ ...f, responses: { ...f.responses, [itemId]: value } }));
   }
 
   async function handleAddLog() {
@@ -712,9 +801,14 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
 
   return (
     <div className="el-modal-overlay" onClick={onClose}>
-      <div className="el-modal-panel el-modal-panel-wide" onClick={(e) => e.stopPropagation()}>
+      <div className={`el-modal-panel el-modal-panel-wide${type.checklist ? " el-modal-panel-xl" : ""}`} onClick={(e) => e.stopPropagation()}>
         <div className="el-modal-head">
-          <div className="el-modal-head-title">{unit.unitTag}</div>
+          <div>
+            <div className="el-modal-head-title">{unit.unitTag}</div>
+            {type.frequencyLabel && (
+              <div className="el-modal-head-sub">{type.frequencyLabel} Test — Form {type.formNo}</div>
+            )}
+          </div>
           <button className="el-modal-close-btn" onClick={onClose}><X size={20} /></button>
         </div>
         <div className="el-modal-scroll">
@@ -761,6 +855,13 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
                   />
                 ))}
               </div>
+              {type.checklist && (
+                <ChecklistFields
+                  checklist={type.checklist}
+                  responses={logForm.responses}
+                  onChange={setResponse}
+                />
+              )}
               <div className="el-log-form-actions">
                 <button className="el-btn-text-muted" onClick={() => setLogFormOpen(false)}>Cancel</button>
                 <button className="el-btn el-btn-save el-btn-inline" onClick={handleAddLog} disabled={logSaving}>
@@ -782,28 +883,52 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
                     <th>Date</th>
                     <th>Technician</th>
                     <th>Result</th>
-                    <th>Notes</th>
+                    {type.checklist ? <th>Fails</th> : <th>Notes</th>}
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((l) => (
-                    <tr key={l.id}>
-                      <td>{l.logDate}</td>
-                      <td>{l.technician}</td>
-                      <td>
-                        {l.testResult && (
-                          <span className={`el-chip${l.testResult === "Fail" ? " el-chip-danger" : ""}`}>{l.testResult}</span>
+                  {logs.map((l) => {
+                    const result = type.checklist ? l.overallResult : l.testResult;
+                    const fails = type.checklist ? countChecklistFails(l.responses) : 0;
+                    const expanded = expandedLogId === l.id;
+                    return (
+                      <React.Fragment key={l.id}>
+                        <tr
+                          className={type.checklist ? "el-log-row-clickable" : undefined}
+                          onClick={type.checklist ? () => setExpandedLogId(expanded ? null : l.id) : undefined}
+                        >
+                          <td>{l.logDate}</td>
+                          <td>{l.technician}</td>
+                          <td>
+                            {result && (
+                              <span className={`el-chip${result === "Fail" ? " el-chip-danger" : ""}`}>{result}</span>
+                            )}
+                          </td>
+                          {type.checklist ? (
+                            <td>{fails > 0 ? <span className="el-chip el-chip-danger">{fails}</span> : "—"}</td>
+                          ) : (
+                            <td className="el-log-notes-cell">{l.notes}</td>
+                          )}
+                          <td>
+                            <button className="el-log-delete-btn" onClick={(e) => { e.stopPropagation(); handleDeleteLog(l.id); }} title="Delete entry">
+                              <Trash2 size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                        {type.checklist && expanded && (
+                          <tr>
+                            <td colSpan={5} className="el-log-expanded-cell">
+                              {l.notes && (
+                                <div className="el-log-expanded-notes"><strong>Deficiencies / Comments:</strong> {l.notes}</div>
+                              )}
+                              <ChecklistView checklist={type.checklist} responses={l.responses || {}} />
+                            </td>
+                          </tr>
                         )}
-                      </td>
-                      <td className="el-log-notes-cell">{l.notes}</td>
-                      <td>
-                        <button className="el-log-delete-btn" onClick={() => handleDeleteLog(l.id)} title="Delete entry">
-                          <Trash2 size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -891,9 +1016,11 @@ const CSS = `
 @media (min-width: 640px) { .el-modal-overlay { align-items: center; } }
 .el-modal-panel { width: 100%; max-width: 560px; background: var(--el-bg); border-radius: 18px 18px 0 0; overflow: hidden; display: flex; flex-direction: column; max-height: 92vh; }
 .el-modal-panel-wide { max-width: 720px; }
+.el-modal-panel-xl { max-width: 900px; }
 @media (min-width: 640px) { .el-modal-panel { border-radius: 16px; } }
 .el-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--el-slate); flex-shrink: 0; }
 .el-modal-head-title { font-family: var(--el-font-display); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: #fff; }
+.el-modal-head-sub { font-size: 11px; color: #9CA3AC; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
 .el-modal-close-btn { background: none; border: none; color: #fff; padding: 4px; display: flex; }
 .el-modal-scroll { overflow-y: auto; padding: 20px; }
 .el-modal-footer { flex-shrink: 0; padding: 16px 20px; display: flex; gap: 12px; border-top: 1px solid var(--el-border); background: var(--el-bg); }
@@ -952,6 +1079,31 @@ const CSS = `
 .el-log-notes-cell { white-space: normal; min-width: 160px; }
 .el-log-delete-btn { background: none; border: none; color: var(--el-ink-muted); padding: 4px; display: flex; border-radius: 6px; }
 .el-log-delete-btn:hover { color: var(--el-danger); background: var(--el-danger-soft); }
+.el-log-row-clickable { cursor: pointer; }
+.el-log-row-clickable:hover { background: var(--el-chip-bg); }
+.el-log-expanded-cell { background: var(--el-chip-bg); white-space: normal; padding: 14px 16px !important; }
+.el-log-expanded-notes { font-size: 13px; margin-bottom: 10px; }
+
+.el-checklist { margin-top: 4px; margin-bottom: 12px; border-top: 1px solid var(--el-border); padding-top: 12px; }
+.el-checklist-section { margin-bottom: 14px; }
+.el-checklist-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--el-ink-muted); background: var(--el-chip-bg); padding: 6px 10px; border-radius: 6px; margin-bottom: 6px; }
+.el-checklist-row { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-bottom: 1px solid var(--el-border); flex-wrap: wrap; }
+.el-checklist-row:last-child { border-bottom: none; }
+.el-checklist-row-label { flex: 1; min-width: 220px; font-size: 12.5px; color: var(--el-ink); display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.el-checklist-item-id { font-family: var(--el-font-mono); font-size: 10px; font-weight: 700; color: var(--el-ink-muted); flex-shrink: 0; }
+.el-checklist-item-type { font-size: 9px; font-weight: 700; background: var(--el-chip-bg); color: var(--el-slate-soft); padding: 1px 5px; border-radius: 4px; flex-shrink: 0; }
+.el-checklist-item-ref { font-size: 10px; color: var(--el-ink-muted); flex-shrink: 0; }
+.el-checklist-row-input { flex-shrink: 0; width: 140px; }
+.el-checklist-select { padding: 6px 8px; font-size: 12px; }
+.el-checklist-reading { display: flex; align-items: center; gap: 6px; }
+.el-checklist-reading .el-field-input { padding: 6px 8px; font-size: 12px; }
+.el-checklist-unit { font-size: 11px; color: var(--el-ink-muted); flex-shrink: 0; }
+
+.el-checklist-view { display: flex; flex-direction: column; gap: 2px; }
+.el-checklist-view-row { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; padding: 3px 0; }
+.el-checklist-view-label { flex: 1; color: var(--el-ink); }
+.el-checklist-view-value { font-weight: 700; color: var(--el-ink); }
+.el-checklist-view-fail { color: var(--el-danger); }
 
 .el-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.2); color: #fff; font-size: 14px; z-index: 60; max-width: 90vw; }
 .el-toast-success { background: var(--el-slate); }

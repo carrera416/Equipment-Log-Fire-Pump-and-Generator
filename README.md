@@ -11,10 +11,23 @@ Three equipment types, each with its own table and its own log history:
 
 - **Diesel Generators** — nameplate + engine data, log entries track run
   hours, fuel level, oil/coolant checks, battery voltage, pass/fail.
-- **Diesel Fire Pumps** — nameplate + engine data, log entries add churn
-  pressure alongside the same run/fuel/fluid checks.
-- **Electric Fire Pumps** — nameplate + motor/controller data, log entries
-  track run minutes, churn pressure, and controller alarm status.
+- **Diesel Fire Pumps** — pump/driver nameplate data matching California CCR
+  Title 19 / NFPA 25 Form AES 5.1, log entries are the full 68-item weekly
+  inspection/test/maintenance checklist from that form.
+- **Electric Fire Pumps** — pump/driver/controller nameplate data matching
+  Form AES 5.3, log entries are the full 37-item monthly checklist from that
+  form.
+
+The two fire pump checklists (`DIESEL_FIRE_PUMP_CHECKLIST` and
+`ELECTRIC_FIRE_PUMP_CHECKLIST` in
+[`src/lib/constants.js`](src/lib/constants.js)) are transcribed item-by-item
+from the official forms, including each item's number, I/T/M type, and NFPA
+25 code reference, so entries can be cross-checked against a paper/PDF copy.
+Each log entry stores its checklist answers as a single JSON blob rather
+than one column per item — see `responses` on `diesel_fire_pump_logs` /
+`electric_fire_pump_logs` in the migration. The itemized "Deficiencies and
+Comments" sub-table from the paper form (with Item/Date/Riser columns) is
+simplified here to one free-text "Deficiencies / Comments" field per visit.
 
 ## 1. Create a Supabase project
 

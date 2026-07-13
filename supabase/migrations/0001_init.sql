@@ -39,6 +39,9 @@ create table if not exists diesel_generator_logs (
   created_at timestamptz not null default now()
 );
 
+-- Diesel and electric fire pump asset fields mirror the "Pump and Driver
+-- Information" box on the California CCR Title 19 / NFPA 25 inspection
+-- forms (AES 5.1 diesel weekly, AES 5.3 electric monthly).
 create table if not exists diesel_fire_pumps (
   id text primary key,
   unit_tag text not null default '',
@@ -46,10 +49,19 @@ create table if not exists diesel_fire_pumps (
   manufacturer text default '',
   model text default '',
   serial text default '',
-  engine_manufacturer text default '',
-  engine_model text default '',
-  rated_gpm text default '',
-  rated_psi text default '',
+  rated_rpm text default '',
+  controller_manufacturer text default '',
+  controller_model text default '',
+  controller_serial text default '',
+  max_suction_pressure_psi text default '',
+  max_psi_shutoff text default '',
+  rated_capacity_gpm text default '',
+  rated_pressure_psi text default '',
+  overload_capacity_gpm text default '',
+  overload_pressure_psi text default '',
+  driver_manufacturer text default '',
+  driver_model text default '',
+  driver_rated_rpm text default '',
   fuel_tank_capacity_gal text default '',
   date_installed text default '',
   notes text default '',
@@ -60,18 +72,17 @@ create table if not exists diesel_fire_pumps (
   date_updated timestamptz not null default now()
 );
 
+-- Log entries store the full itemized checklist (per Form AES 5.1, ~68
+-- items) as jsonb keyed by item id (e.g. "1.27") rather than one column per
+-- item — see DIESEL_FIRE_PUMP_CHECKLIST in src/lib/constants.js for the
+-- item list this is meant to hold.
 create table if not exists diesel_fire_pump_logs (
   id text primary key,
   unit_id text not null references diesel_fire_pumps(id) on delete cascade,
   log_date text not null default '',
   technician text default '',
-  run_hours text default '',
-  fuel_level_pct text default '',
-  oil_level_ok boolean,
-  coolant_level_ok boolean,
-  battery_voltage text default '',
-  churn_pressure_psi text default '',
-  test_result text default '',
+  overall_result text default '',
+  responses jsonb not null default '{}',
   notes text default '',
   created_at timestamptz not null default now()
 );
@@ -83,12 +94,22 @@ create table if not exists electric_fire_pumps (
   manufacturer text default '',
   model text default '',
   serial text default '',
-  motor_hp text default '',
-  voltage text default '',
-  rated_gpm text default '',
-  rated_psi text default '',
+  rated_rpm text default '',
   controller_manufacturer text default '',
   controller_model text default '',
+  controller_serial text default '',
+  max_suction_pressure_psi text default '',
+  max_psi_shutoff text default '',
+  rated_capacity_gpm text default '',
+  rated_pressure_psi text default '',
+  overload_capacity_gpm text default '',
+  overload_pressure_psi text default '',
+  driver_manufacturer text default '',
+  driver_model text default '',
+  driver_rated_rpm text default '',
+  full_load_amp text default '',
+  rated_voltage text default '',
+  service_factor text default '',
   date_installed text default '',
   notes text default '',
   has_photo boolean not null default false,
@@ -98,15 +119,15 @@ create table if not exists electric_fire_pumps (
   date_updated timestamptz not null default now()
 );
 
+-- Per Form AES 5.3 (~37 items) — see ELECTRIC_FIRE_PUMP_CHECKLIST in
+-- src/lib/constants.js.
 create table if not exists electric_fire_pump_logs (
   id text primary key,
   unit_id text not null references electric_fire_pumps(id) on delete cascade,
   log_date text not null default '',
   technician text default '',
-  run_minutes text default '',
-  churn_pressure_psi text default '',
-  controller_alarm_ok boolean,
-  test_result text default '',
+  overall_result text default '',
+  responses jsonb not null default '{}',
   notes text default '',
   created_at timestamptz not null default now()
 );
