@@ -48,6 +48,9 @@ const DIESEL_GENERATOR_LOG_FIELDS = [
 ];
 
 const GOOD_FAIR_POOR_OPTIONS = ["Good", "Fair", "Poor"];
+const FUEL_LEVEL_OPTIONS = ["Full", "3/4", "1/2", "1/4"];
+const FULL_OR_FAIL_OPTIONS = ["Full", "Fail"];
+const NONE_OR_FAIL_OPTIONS = ["None", "Fail"];
 
 // Checklist items transcribed from "Emergency Engine Operating Log
 // Template.xlsx" (Emergency Engine Log-Final sheet), items 2-7 and 9-43 —
@@ -70,15 +73,15 @@ export const DIESEL_GENERATOR_CHECKLIST = [
   { id: "6", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Post Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", unit: "hrs" },
   { id: "7", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Subtract Difference Between Post and Pre Run-Time Reading", ref: "Run time difference", valueType: "reading", unit: "hrs" },
   { id: "9", section: "Generator Maintenance Checklist", type: "I", label: "Check Crankcase Engine Oil Level", ref: "As indicated on dipstick", valueType: "check" },
-  { id: "10", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Level - Main Tank", ref: "Min 2/3 full", valueType: "check" },
-  { id: "11", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Level - Day Tank (If Applicable)", ref: "Min 2/3 full", valueType: "check" },
+  { id: "10", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Level - Main Tank", ref: "Min 2/3 full", valueType: "select", options: FUEL_LEVEL_OPTIONS },
+  { id: "11", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Level - Day Tank (If Applicable)", ref: "Min 2/3 full", valueType: "select", options: FUEL_LEVEL_OPTIONS },
   { id: "12", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Pump Operation (If Applicable)", ref: "Operational", valueType: "check" },
-  { id: "13", section: "Generator Maintenance Checklist", type: "I", label: "Check Cooling System (Radiator) Water Level", ref: "Full", valueType: "check" },
+  { id: "13", section: "Generator Maintenance Checklist", type: "I", label: "Check Cooling System (Radiator) Water Level", ref: "Full", valueType: "select", options: FULL_OR_FAIL_OPTIONS },
   { id: "14", section: "Generator Maintenance Checklist", type: "I", label: "Verify Water Jacket Heater Operation", ref: "Operational", valueType: "check" },
   { id: "15", section: "Generator Maintenance Checklist", type: "I", label: "Inspect Hoses and Belts for Cracking and Wear", ref: "Good/Fair/Poor", valueType: "select", options: GOOD_FAIR_POOR_OPTIONS },
   { id: "16", section: "Generator Maintenance Checklist", type: "I", label: "Inspect Electrical Control Panel", ref: "No burn marks/loose wires", valueType: "check" },
   { id: "17", section: "Generator Maintenance Checklist", type: "I", label: "Inspect Battery Terminals", ref: "No corrosion", valueType: "check" },
-  { id: "18", section: "Generator Maintenance Checklist", type: "I", label: "Check Battery Electrolyte Level", ref: "Full", valueType: "check" },
+  { id: "18", section: "Generator Maintenance Checklist", type: "I", label: "Check Battery Electrolyte Level", ref: "Full", valueType: "select", options: FULL_OR_FAIL_OPTIONS },
   { id: "19", section: "Generator Maintenance Checklist", type: "I", label: "Check Battery Specific Gravity (Monthly)", ref: "1.250 - 1.750", valueType: "reading", unit: "SG" },
   { id: "20", section: "Generator Maintenance Checklist", type: "I", label: "Record Battery Voltage (12VDC or 24VDC)", ref: "13.3-13.6 / 26.6-27.2", valueType: "reading", unit: "VDC" },
   { id: "21", section: "Generator Maintenance Checklist", type: "I", label: "Check Battery Indicator Lamps", ref: "On", valueType: "check" },
@@ -95,7 +98,7 @@ export const DIESEL_GENERATOR_CHECKLIST = [
   { id: "32", section: "Generator Maintenance Checklist", type: "I", label: "Record Fuel Pressure Reading", ref: "Not below 30 PSI", valueType: "reading", unit: "PSI" },
   { id: "33", section: "Generator Maintenance Checklist", type: "I", label: "Record Motor RPM's", ref: "", valueType: "reading", unit: "RPM" },
   { id: "34", section: "Generator Maintenance Checklist", type: "I", label: "Verify Adequate Air-Flow Through Radiator", ref: "No blockage in fins", valueType: "check" },
-  { id: "35", section: "Generator Maintenance Checklist", type: "I", label: "Check for Unusual Noises, Heat, and Vibrations", ref: "None", valueType: "check" },
+  { id: "35", section: "Generator Maintenance Checklist", type: "I", label: "Check for Unusual Noises, Heat, and Vibrations", ref: "None", valueType: "select", options: NONE_OR_FAIL_OPTIONS },
   { id: "36", section: "Generator Maintenance Checklist", type: "I", label: "Check Excessive Exhaust Smoke", ref: "Not \"thick black\"", valueType: "check" },
   { id: "37", section: "Generator Maintenance Checklist", type: "I", label: "Check Exhaust System for Leaks or Damage", ref: "Good/Fair/Poor", valueType: "select", options: GOOD_FAIR_POOR_OPTIONS },
   { id: "38", section: "Generator Maintenance Checklist", type: "I", label: "Drain Exhaust Condensate Trap (If Applicable)", ref: "Yes/No", valueType: "select", options: YES_NO_OPTIONS },
