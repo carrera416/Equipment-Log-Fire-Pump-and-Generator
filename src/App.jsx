@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Camera, Search, Plus, X, Trash2, AlertTriangle, Check,
-  Image as ImageIcon, LogOut, ClipboardList, Sparkles, Loader2,
+  Image as ImageIcon, LogOut, ClipboardList, Sparkles, Loader2, RotateCw,
 } from "lucide-react";
 import {
   loadUnits, upsertUnit, deleteUnit, newUnitId,
@@ -43,6 +43,26 @@ function resizeImage(dataUrl, maxDim, quality) {
       canvas.width = width; canvas.height = height;
       canvas.getContext("2d").drawImage(img, 0, 0, width, height);
       resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+// Rotates a dataURL image 90° clockwise per call (degrees is a multiple of 90).
+function rotateImage(dataUrl, degrees) {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const swap = degrees % 180 !== 0;
+      const canvas = document.createElement("canvas");
+      canvas.width = swap ? img.height : img.width;
+      canvas.height = swap ? img.width : img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((degrees * Math.PI) / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      resolve(canvas.toDataURL("image/jpeg", 0.9));
     };
     img.onerror = reject;
     img.src = dataUrl;
@@ -622,6 +642,13 @@ function UnitModal({ type, unit, onClose, onSaved, onDeleted, showToast }) {
     setPendingPhotos((prev) => prev.filter((p) => p.id !== photoId));
   }
 
+  async function rotatePhoto(photoId) {
+    const photo = pendingPhotos.find((p) => p.id === photoId);
+    if (!photo) return;
+    const rotated = await rotateImage(photo.dataUrl, 90);
+    setPendingPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, dataUrl: rotated } : p)));
+  }
+
   async function handleAIExtract() {
     if (pendingPhotos.length === 0) return;
     const aiFields = type.assetFields.filter((f) => f.aiReadable);
@@ -713,6 +740,7 @@ function UnitModal({ type, unit, onClose, onSaved, onDeleted, showToast }) {
               {pendingPhotos.map((p) => (
                 <div key={p.id} className="el-photo-tile">
                   <img src={p.dataUrl} alt="" />
+                  <button className="el-photo-rotate-btn" onClick={() => rotatePhoto(p.id)} title="Rotate"><RotateCw size={13} /></button>
                   <button className="el-photo-remove-btn" onClick={() => removePhoto(p.id)}><X size={13} /></button>
                 </div>
               ))}
@@ -1081,6 +1109,8 @@ const CSS = `
 .el-photo-tile img { width: 100%; height: 100%; object-fit: cover; }
 .el-photo-remove-btn { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; background: rgba(27,29,30,0.65); color: #fff; border: none; display: flex; align-items: center; justify-content: center; }
 .el-photo-remove-btn:hover { background: var(--el-danger); }
+.el-photo-rotate-btn { position: absolute; top: 4px; left: 4px; width: 22px; height: 22px; border-radius: 50%; background: rgba(27,29,30,0.65); color: #fff; border: none; display: flex; align-items: center; justify-content: center; }
+.el-photo-rotate-btn:hover { background: var(--el-accent); }
 .el-photo-add-tile { position: relative; border-radius: 8px; border: 2px dashed var(--el-border-strong); background: var(--el-surface); aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--el-ink-muted); overflow: hidden; }
 .el-photo-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .el-photo-placeholder-text { font-size: 11px; color: var(--el-ink-muted); text-align: center; padding: 0 6px; }
