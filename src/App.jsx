@@ -178,21 +178,23 @@ function ChecklistFields({ checklist, responses, onChange }) {
                 {item.ref && <span className="el-checklist-item-ref">{item.ref}</span>}
               </div>
               <div className="el-checklist-row-input">
-                {item.valueType === "check" ? (
+                {item.valueType === "check" || item.valueType === "select" ? (
                   <select
                     className="el-field-input el-checklist-select"
                     value={responses[item.id] || ""}
                     onChange={(e) => onChange(item.id, e.target.value)}
                   >
                     <option value="">—</option>
-                    {OPTION_LISTS.CHECK_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                    {(item.valueType === "select" ? item.options : OPTION_LISTS.CHECK_OPTIONS).map((o) => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
                   </select>
                 ) : (
                   <div className="el-checklist-reading">
                     <input
                       className="el-field-input"
                       type="text"
-                      inputMode="decimal"
+                      inputMode={item.valueType === "reading" ? "decimal" : "text"}
                       value={responses[item.id] || ""}
                       onChange={(e) => onChange(item.id, e.target.value)}
                     />

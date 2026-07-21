@@ -47,15 +47,25 @@ const DIESEL_GENERATOR_LOG_FIELDS = [
   { name: "notes", label: "Deficiencies / Comments", multiline: true, span: 2 },
 ];
 
+const GOOD_FAIR_POOR_OPTIONS = ["Good", "Fair", "Poor"];
+
 // Checklist items transcribed from "Emergency Engine Operating Log
 // Template.xlsx" (Emergency Engine Log-Final sheet), items 2-7 and 9-43 —
 // item 1 (date) and item 8 (technician) are covered by the top-level fields
 // above. Each item's `ref` holds the sheet's "RANGE" column (the acceptable
-// value/range a technician checks the reading against).
+// value/range a technician checks the reading against). Unlike the CCR
+// Title 19 fire pump forms (which use one fixed Pass/Fail/N/A legend for
+// every item), this sheet's RANGE column varies row to row — some are a
+// fixed set of choices (Good/Fair/Poor, Yes/No), some are a free-text
+// reading that isn't a plain number (a clock time, "480/480/480"), and the
+// rest are pass/fail-style checks. `valueType` reflects that per item:
+// "select" (own `options` array), "text" (free text, no numeric keypad),
+// "reading" (numeric, gets a decimal keypad on mobile), or "check"
+// (Pass/Fail/N/A).
 export const DIESEL_GENERATOR_CHECKLIST = [
-  { id: "2", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Run Start Time", ref: "Start time, am/pm", valueType: "reading", unit: "" },
-  { id: "3", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Stop Time", ref: "End time, am/pm", valueType: "reading", unit: "" },
-  { id: "4", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Reason for Operation", ref: "Test, Emergency, Other", valueType: "select", options: "OPERATION_REASON_OPTIONS" },
+  { id: "2", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Run Start Time", ref: "Start time, am/pm", valueType: "text" },
+  { id: "3", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Stop Time", ref: "End time, am/pm", valueType: "text" },
+  { id: "4", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Reason for Operation", ref: "Test, Emergency, Other", valueType: "select", options: OPERATION_REASON_OPTIONS },
   { id: "5", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Prestart Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", unit: "hrs" },
   { id: "6", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Post Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", unit: "hrs" },
   { id: "7", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Subtract Difference Between Post and Pre Run-Time Reading", ref: "Run time difference", valueType: "reading", unit: "hrs" },
@@ -65,7 +75,7 @@ export const DIESEL_GENERATOR_CHECKLIST = [
   { id: "12", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Pump Operation (If Applicable)", ref: "Operational", valueType: "check" },
   { id: "13", section: "Generator Maintenance Checklist", type: "I", label: "Check Cooling System (Radiator) Water Level", ref: "Full", valueType: "check" },
   { id: "14", section: "Generator Maintenance Checklist", type: "I", label: "Verify Water Jacket Heater Operation", ref: "Operational", valueType: "check" },
-  { id: "15", section: "Generator Maintenance Checklist", type: "I", label: "Inspect Hoses and Belts for Cracking and Wear", ref: "Good/Fair/Poor", valueType: "check" },
+  { id: "15", section: "Generator Maintenance Checklist", type: "I", label: "Inspect Hoses and Belts for Cracking and Wear", ref: "Good/Fair/Poor", valueType: "select", options: GOOD_FAIR_POOR_OPTIONS },
   { id: "16", section: "Generator Maintenance Checklist", type: "I", label: "Inspect Electrical Control Panel", ref: "No burn marks/loose wires", valueType: "check" },
   { id: "17", section: "Generator Maintenance Checklist", type: "I", label: "Inspect Battery Terminals", ref: "No corrosion", valueType: "check" },
   { id: "18", section: "Generator Maintenance Checklist", type: "I", label: "Check Battery Electrolyte Level", ref: "Full", valueType: "check" },
@@ -78,8 +88,8 @@ export const DIESEL_GENERATOR_CHECKLIST = [
   { id: "25", section: "Generator Maintenance Checklist", type: "I", label: "Estimated Cranking Time", ref: "0-10 seconds", valueType: "reading", unit: "sec" },
   { id: "26", section: "Generator Maintenance Checklist", type: "I", label: "Estimated Seconds to Reach Running Speed", ref: "0-10 seconds", valueType: "reading", unit: "sec" },
   { id: "27", section: "Generator Maintenance Checklist", type: "I", label: "Record Hertz", ref: "60", valueType: "reading", unit: "Hz" },
-  { id: "28", section: "Generator Maintenance Checklist", type: "I", label: "Record Voltage - Phase 1/2/3", ref: "480/480/480", valueType: "reading", unit: "V" },
-  { id: "29", section: "Generator Maintenance Checklist", type: "I", label: "Record Amperage - Phase 1/2/3", ref: "00/00/00", valueType: "reading", unit: "A" },
+  { id: "28", section: "Generator Maintenance Checklist", type: "I", label: "Record Voltage - Phase 1/2/3", ref: "480/480/480", valueType: "text", unit: "V" },
+  { id: "29", section: "Generator Maintenance Checklist", type: "I", label: "Record Amperage - Phase 1/2/3", ref: "00/00/00", valueType: "text", unit: "A" },
   { id: "30", section: "Generator Maintenance Checklist", type: "I", label: "Water Temperature Reading", ref: "170°F - 190°F", valueType: "reading", unit: "°F" },
   { id: "31", section: "Generator Maintenance Checklist", type: "I", label: "Record Oil Pressure Reading", ref: "40-70 PSI", valueType: "reading", unit: "PSI" },
   { id: "32", section: "Generator Maintenance Checklist", type: "I", label: "Record Fuel Pressure Reading", ref: "Not below 30 PSI", valueType: "reading", unit: "PSI" },
@@ -87,8 +97,8 @@ export const DIESEL_GENERATOR_CHECKLIST = [
   { id: "34", section: "Generator Maintenance Checklist", type: "I", label: "Verify Adequate Air-Flow Through Radiator", ref: "No blockage in fins", valueType: "check" },
   { id: "35", section: "Generator Maintenance Checklist", type: "I", label: "Check for Unusual Noises, Heat, and Vibrations", ref: "None", valueType: "check" },
   { id: "36", section: "Generator Maintenance Checklist", type: "I", label: "Check Excessive Exhaust Smoke", ref: "Not \"thick black\"", valueType: "check" },
-  { id: "37", section: "Generator Maintenance Checklist", type: "I", label: "Check Exhaust System for Leaks or Damage", ref: "Good/Fair/Poor", valueType: "check" },
-  { id: "38", section: "Generator Maintenance Checklist", type: "I", label: "Drain Exhaust Condensate Trap (If Applicable)", ref: "Yes/No", valueType: "check" },
+  { id: "37", section: "Generator Maintenance Checklist", type: "I", label: "Check Exhaust System for Leaks or Damage", ref: "Good/Fair/Poor", valueType: "select", options: GOOD_FAIR_POOR_OPTIONS },
+  { id: "38", section: "Generator Maintenance Checklist", type: "I", label: "Drain Exhaust Condensate Trap (If Applicable)", ref: "Yes/No", valueType: "select", options: YES_NO_OPTIONS },
   { id: "39", section: "Generator Maintenance Checklist", type: "I", label: "Inspect for Leaks of Any Kind", ref: "No water, oil, or fuel leaks", valueType: "check" },
   { id: "40", section: "Generator Maintenance Checklist", type: "I", label: "Diesel Particulate Filter Back-Pressure (If Applicable)", ref: "", valueType: "reading", unit: "PSI" },
   { id: "41", section: "Generator Maintenance Checklist", type: "I", label: "Transfer Time After Power Restore", ref: "0-10 mins", valueType: "reading", unit: "min" },
