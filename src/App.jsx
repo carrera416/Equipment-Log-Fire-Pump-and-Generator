@@ -544,7 +544,7 @@ function HomeScreen({ onSelectUnit }) {
           {filtered.map(({ type, unit }) => (
             <button
               key={type.key + unit.id}
-              className="el-bubble"
+              className={`el-bubble el-bubble-${type.key}`}
               onClick={() => onSelectUnit(type.key, unit.id)}
             >
               {homeBubbleLabel({ type, unit })}
@@ -1177,8 +1177,17 @@ const CSS = `
 @media (min-width: 960px) { .el-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
 .el-bubble-row { display: flex; flex-wrap: wrap; gap: 10px; }
-.el-bubble { background: var(--el-surface); border: 1px solid var(--el-border); border-radius: 999px; padding: 12px 20px; font-size: 14px; font-weight: 700; color: var(--el-ink); box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: transform 0.12s ease, border-color 0.12s ease; }
-.el-bubble:hover { transform: translateY(-1px); border-color: var(--el-accent); color: var(--el-accent-deep); }
+.el-bubble { background: var(--el-surface); border: 1px solid var(--el-border); border-radius: 999px; padding: 12px 20px; font-size: 14px; font-weight: 700; color: var(--el-ink); box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease; }
+.el-bubble:hover { transform: translateY(-1px); }
+
+.el-bubble-diesel_generators { background: #FBE7C6; border-color: #E7BE79; color: #8A5A17; }
+.el-bubble-diesel_generators:hover { background: #F7D89E; border-color: #C99A44; }
+
+.el-bubble-diesel_fire_pumps { background: var(--el-danger-soft); border-color: #E0AFAA; color: var(--el-danger); }
+.el-bubble-diesel_fire_pumps:hover { background: #EECAC5; border-color: var(--el-danger); }
+
+.el-bubble-electric_fire_pumps { background: #D9E7F8; border-color: #A6C4E8; color: #2A5C8A; }
+.el-bubble-electric_fire_pumps:hover { background: #C3D9F2; border-color: #2A5C8A; }
 
 .el-card { text-align: left; border-radius: 10px; overflow: hidden; background: var(--el-surface); border: 1px solid var(--el-border); box-shadow: 0 1px 2px rgba(0,0,0,0.04); position: relative; padding: 0; width: 100%; cursor: pointer; transition: transform 0.12s ease; }
 .el-card:hover { transform: translateY(-2px); }
