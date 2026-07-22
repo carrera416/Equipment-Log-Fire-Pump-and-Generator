@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Camera, Search, Plus, X, Trash2, AlertTriangle, Check,
-  Image as ImageIcon, LogOut, ClipboardList, Sparkles, Loader2, RotateCw,
+  Image as ImageIcon, LogOut, ClipboardList, Sparkles, Loader2, RotateCw, FileDown,
 } from "lucide-react";
 import {
   loadUnits, upsertUnit, deleteUnit, newUnitId,
@@ -11,6 +11,7 @@ import {
 import { EQUIPMENT_TYPES, OPTION_LISTS } from "./lib/constants.js";
 import { supabase } from "./lib/supabaseClient.js";
 import { extractFromPhoto } from "./lib/extractNameplate.js";
+import { exportLogsToPdf } from "./lib/exportPdf.js";
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -983,6 +984,15 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
     }
   }
 
+  function handleExport() {
+    try {
+      exportLogsToPdf(type, unit, logs);
+    } catch (err) {
+      console.error("Export failed", err);
+      showToast("Couldn't generate the PDF — try again", "error");
+    }
+  }
+
   const summaryFields = type.assetFields.filter((f) => f.name !== "notes");
 
   return (
@@ -1024,9 +1034,16 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
 
           <div className="el-log-section-head">
             <div className="el-section-heading">Test / Run Log</div>
-            <button className="el-btn-accent" onClick={() => setLogFormOpen((v) => !v)}>
-              <Plus size={13} /> Add Entry
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              {type.checklist && logs.length > 0 && (
+                <button className="el-btn-ghost-dark el-btn-ghost-light" onClick={handleExport}>
+                  <FileDown size={13} /> Export PDF
+                </button>
+              )}
+              <button className="el-btn-accent" onClick={() => setLogFormOpen((v) => !v)}>
+                <Plus size={13} /> Add Entry
+              </button>
+            </div>
           </div>
 
           {logFormOpen && (
