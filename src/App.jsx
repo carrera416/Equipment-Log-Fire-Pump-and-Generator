@@ -501,11 +501,7 @@ function HomeScreen({ onSelectUnit }) {
       EQUIPMENT_TYPES.map((type) => loadUnits(type.key).then((units) => units.map((unit) => ({ type, unit }))))
     ).then((groups) => {
       if (!active) return;
-      const flat = groups.flat().sort((a, b) => {
-        const locCompare = (a.unit.location || "").localeCompare(b.unit.location || "");
-        if (locCompare !== 0) return locCompare;
-        return a.type.homeLabel.localeCompare(b.type.homeLabel);
-      });
+      const flat = groups.flat().sort((a, b) => homeBubbleLabel(a).localeCompare(homeBubbleLabel(b)));
       setEntries(flat);
       setLoading(false);
     });
@@ -544,21 +540,14 @@ function HomeScreen({ onSelectUnit }) {
           <div className="el-empty-sub">Use the tabs above to add a generator or fire pump.</div>
         </div>
       ) : (
-        <div className="el-grid">
+        <div className="el-bubble-row">
           {filtered.map(({ type, unit }) => (
             <button
               key={type.key + unit.id}
-              className="el-card el-home-card"
+              className="el-bubble"
               onClick={() => onSelectUnit(type.key, unit.id)}
             >
-              <div className="el-card-strip" />
-              <div className="el-card-head">
-                <div className="el-card-head-text">
-                  <div className="el-card-title">{unit.location || "Unassigned"} — {type.homeLabel}</div>
-                  {unit.unitTag && <div className="el-card-location">{unit.unitTag}</div>}
-                </div>
-                {buildThumbElement(unit)}
-              </div>
+              {homeBubbleLabel({ type, unit })}
             </button>
           ))}
         </div>
@@ -567,12 +556,12 @@ function HomeScreen({ onSelectUnit }) {
   );
 }
 
-function buildThumbElement(unit) {
-  return (
-    <div className="el-card-thumb">
-      {unit.thumb ? <img src={unit.thumb} alt="" /> : <ImageIcon size={18} />}
-    </div>
-  );
+// "5451 - Fire Pump" when the unit tag alone doesn't say what it is, or just
+// the tag as typed ("5451/5453/5455 Generator") when it already does.
+function homeBubbleLabel({ type, unit }) {
+  const tag = (unit.unitTag || unit.location || "Untitled").trim();
+  if (tag.toLowerCase().includes(type.singular.toLowerCase())) return tag;
+  return `${tag} - ${type.singular}`;
 }
 
 function EquipmentSection({ type, showToast, pendingOpenUnitId, onConsumedPendingOpen }) {
@@ -1186,6 +1175,10 @@ const CSS = `
 .el-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 640px) { .el-grid { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 960px) { .el-grid { grid-template-columns: 1fr 1fr 1fr; } }
+
+.el-bubble-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.el-bubble { background: var(--el-surface); border: 1px solid var(--el-border); border-radius: 999px; padding: 12px 20px; font-size: 14px; font-weight: 700; color: var(--el-ink); box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: transform 0.12s ease, border-color 0.12s ease; }
+.el-bubble:hover { transform: translateY(-1px); border-color: var(--el-accent); color: var(--el-accent-deep); }
 
 .el-card { text-align: left; border-radius: 10px; overflow: hidden; background: var(--el-surface); border: 1px solid var(--el-border); box-shadow: 0 1px 2px rgba(0,0,0,0.04); position: relative; padding: 0; width: 100%; cursor: pointer; transition: transform 0.12s ease; }
 .el-card:hover { transform: translateY(-2px); }
