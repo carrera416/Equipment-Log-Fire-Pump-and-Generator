@@ -408,7 +408,9 @@ function ForcePasswordChange() {
 }
 
 function EquipmentLogApp({ userEmail }) {
+  const [screen, setScreen] = useState("home");
   const [activeKey, setActiveKey] = useState(EQUIPMENT_TYPES[0].key);
+  const [pendingOpenUnitId, setPendingOpenUnitId] = useState(null);
   const [toast, setToast] = useState(null);
 
   const showToast = useCallback((message, type = "success") => {
@@ -418,6 +420,23 @@ function EquipmentLogApp({ userEmail }) {
   }, []);
 
   const activeType = EQUIPMENT_TYPES.find((t) => t.key === activeKey);
+
+  function goHome() {
+    setScreen("home");
+    setPendingOpenUnitId(null);
+  }
+
+  function goToType(key) {
+    setScreen("type");
+    setActiveKey(key);
+    setPendingOpenUnitId(null);
+  }
+
+  function openUnitFromHome(key, unitId) {
+    setActiveKey(key);
+    setPendingOpenUnitId(unitId);
+    setScreen("type");
+  }
 
   return (
     <div className="el-root">
@@ -436,11 +455,17 @@ function EquipmentLogApp({ userEmail }) {
             </div>
           </div>
           <div className="el-tabs">
+            <button
+              className={`el-tab${screen === "home" ? " el-tab-active" : ""}`}
+              onClick={goHome}
+            >
+              Home
+            </button>
             {EQUIPMENT_TYPES.map((t) => (
               <button
                 key={t.key}
-                className={`el-tab${t.key === activeKey ? " el-tab-active" : ""}`}
-                onClick={() => setActiveKey(t.key)}
+                className={`el-tab${screen === "type" && t.key === activeKey ? " el-tab-active" : ""}`}
+                onClick={() => goToType(t.key)}
               >
                 {t.label}
               </button>
@@ -448,13 +473,109 @@ function EquipmentLogApp({ userEmail }) {
           </div>
         </div>
       </div>
-      <EquipmentSection key={activeType.key} type={activeType} showToast={showToast} />
+      {screen === "home" ? (
+        <HomeScreen onSelectUnit={openUnitFromHome} />
+      ) : (
+        <EquipmentSection
+          key={activeType.key}
+          type={activeType}
+          showToast={showToast}
+          pendingOpenUnitId={pendingOpenUnitId}
+          onConsumedPendingOpen={() => setPendingOpenUnitId(null)}
+        />
+      )}
       <Toast toast={toast} />
     </div>
   );
 }
 
-function EquipmentSection({ type, showToast }) {
+function HomeScreen({ onSelectUnit }) {
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    Promise.all(
+      EQUIPMENT_TYPES.map((type) => loadUnits(type.key).then((units) => units.map((unit) => ({ type, unit }))))
+    ).then((groups) => {
+      if (!active) return;
+      const flat = groups.flat().sort((a, b) => {
+        const locCompare = (a.unit.location || "").localeCompare(b.unit.location || "");
+        if (locCompare !== 0) return locCompare;
+        return a.type.homeLabel.localeCompare(b.type.homeLabel);
+      });
+      setEntries(flat);
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const filtered = entries.filter(({ type, unit }) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return [unit.unitTag, unit.location, type.homeLabel, unit.manufacturer, unit.model, unit.serial]
+      .some((v) => (v || "").toLowerCase().includes(q));
+  });
+
+  return (
+    <div className="el-page-body">
+      <div className="el-search-wrap">
+        <span className="el-search-icon"><Search size={16} /></span>
+        <input
+          className="el-search-input"
+          placeholder="Search all equipment..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="el-count-line" style={{ marginTop: 18, marginBottom: 12 }}>
+        {filtered.length} {filtered.length === 1 ? "Unit" : "Units"}
+      </div>
+
+      {loading ? (
+        <div className="el-loading-row"><span className="el-spinner el-spinner-dark" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="el-empty-state">
+          <ClipboardList size={30} />
+          <div className="el-empty-title">No equipment yet</div>
+          <div className="el-empty-sub">Use the tabs above to add a generator or fire pump.</div>
+        </div>
+      ) : (
+        <div className="el-grid">
+          {filtered.map(({ type, unit }) => (
+            <button
+              key={type.key + unit.id}
+              className="el-card el-home-card"
+              onClick={() => onSelectUnit(type.key, unit.id)}
+            >
+              <div className="el-card-strip" />
+              <div className="el-card-head">
+                <div className="el-card-head-text">
+                  <div className="el-card-title">{unit.location || "Unassigned"} — {type.homeLabel}</div>
+                  {unit.unitTag && <div className="el-card-location">{unit.unitTag}</div>}
+                </div>
+                {buildThumbElement(unit)}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildThumbElement(unit) {
+  return (
+    <div className="el-card-thumb">
+      {unit.thumb ? <img src={unit.thumb} alt="" /> : <ImageIcon size={18} />}
+    </div>
+  );
+}
+
+function EquipmentSection({ type, showToast, pendingOpenUnitId, onConsumedPendingOpen }) {
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -470,6 +591,15 @@ function EquipmentSection({ type, showToast }) {
   }, [type.key]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!pendingOpenUnitId) return;
+    const match = units.find((u) => u.id === pendingOpenUnitId);
+    if (match) {
+      setDetailUnit(match);
+      onConsumedPendingOpen();
+    }
+  }, [units, pendingOpenUnitId, onConsumedPendingOpen]);
 
   const filtered = units.filter((u) => {
     if (!search.trim()) return true;
