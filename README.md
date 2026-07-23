@@ -3,6 +3,40 @@
 Diesel generator and fire pump (diesel + electric) nameplate register and
 recurring test/run log, in one place.
 
+## Quick reference
+
+- **Live app:** https://unique-kelpie-89a72a.netlify.app
+- **This repo:** https://github.com/carrera416/Equipment-Log-Fire-Pump-and-Generator
+- **Deploy is manual** — pushing to GitHub does *not* update the live site by
+  itself. To publish a change:
+  1. `npm run build` (produces a `dist/` folder)
+  2. Go to https://app.netlify.com/sites/unique-kelpie-89a72a/deploys
+  3. Drag the **contents** of `dist/` (not the zipped folder, not a partial
+     selection — all of it in one drop: `assets/`, `icons/`, `pdf-templates/`,
+     `index.html`, `manifest.webmanifest`, `registerSW.js`, `sw.js`, the
+     `workbox-*.js` file) onto the drop zone, and wait for it to show
+     "Published" before reloading the site.
+  4. Once live, the app self-updates any already-open tabs/installed copies
+     within about a minute — no need to tell people to hard-refresh.
+- **Supabase project:** get the URL + anon key from the Supabase dashboard →
+  Project Settings → API (or copy them from the `.env` file on whichever
+  computer you set up first — `.env` isn't committed to this repo, so each
+  computer needs its own copy; see step 2 below).
+
+## Working on this from a second computer
+
+```
+git clone https://github.com/carrera416/Equipment-Log-Fire-Pump-and-Generator.git equipment-log
+cd equipment-log
+npm install
+cp .env.example .env   # then fill in the Supabase URL + anon key, see above
+npm run dev
+```
+
+That's the whole setup — everything else (Supabase project, live site,
+Netlify config) is already shared/hosted, so a second computer just needs the
+code plus its own `.env`.
+
 This is a Vite + React app backed by Supabase (Postgres + Storage + Auth).
 Sign-in is required — anyone with an account (created by an admin in the
 Supabase dashboard, no public self-signup) can read/write the shared log.
@@ -115,12 +149,8 @@ npm run dev
 
 ## 5. Build & deploy
 
-```
-npm run build
-```
-
-Drag the `dist/` folder onto [Netlify Drop](https://app.netlify.com/drop), or
-push `dist/` to GitHub Pages.
+See **Quick reference** at the top of this file for the exact steps to
+publish to the live site.
 
 ## Notes on auth
 
