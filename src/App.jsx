@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Camera, Search, Plus, X, Trash2, AlertTriangle, Check,
-  Image as ImageIcon, LogOut, ClipboardList, Sparkles, Loader2, RotateCw, FileDown,
+  Image as ImageIcon, LogOut, ClipboardList, Sparkles, Loader2, RotateCw, FileDown, RefreshCw,
 } from "lucide-react";
 import {
   loadUnits, upsertUnit, deleteUnit, newUnitId,
@@ -12,6 +12,7 @@ import { EQUIPMENT_TYPES, OPTION_LISTS } from "./lib/constants.js";
 import { supabase } from "./lib/supabaseClient.js";
 import { extractFromPhoto } from "./lib/extractNameplate.js";
 import { exportLogsToPdf } from "./lib/exportPdf.js";
+import { fillOfficialPdf, downloadOfficialPdf, officialFormAvailable } from "./lib/fillOfficialPdf.js";
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -413,6 +414,18 @@ function EquipmentLogApp({ userEmail }) {
   const [activeKey, setActiveKey] = useState(EQUIPMENT_TYPES[0].key);
   const [pendingOpenUnitId, setPendingOpenUnitId] = useState(null);
   const [toast, setToast] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const activeRefreshRef = useRef(null);
+
+  async function handleRefresh() {
+    if (!activeRefreshRef.current) return;
+    setRefreshing(true);
+    try {
+      await activeRefreshRef.current();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   const showToast = useCallback((message, type = "success") => {
     setToast({ message, type });
@@ -450,6 +463,9 @@ function EquipmentLogApp({ userEmail }) {
               <div className="el-brand-subtitle">Generators &amp; Fire Pumps</div>
             </div>
             <div className="el-topbar-actions">
+              <button className="el-btn-ghost-dark" onClick={handleRefresh} disabled={refreshing} title="Refresh">
+                <RefreshCw size={13} className={refreshing ? "el-spin" : ""} /> Refresh
+              </button>
               <button className="el-btn-ghost-dark" onClick={() => supabase.auth.signOut()} title={userEmail}>
                 <LogOut size={13} /> Sign Out
               </button>
@@ -475,7 +491,7 @@ function EquipmentLogApp({ userEmail }) {
         </div>
       </div>
       {screen === "home" ? (
-        <HomeScreen onSelectUnit={openUnitFromHome} />
+        <HomeScreen onSelectUnit={openUnitFromHome} registerRefresh={(fn) => { activeRefreshRef.current = fn; }} />
       ) : (
         <EquipmentSection
           key={activeType.key}
@@ -483,6 +499,7 @@ function EquipmentLogApp({ userEmail }) {
           showToast={showToast}
           pendingOpenUnitId={pendingOpenUnitId}
           onConsumedPendingOpen={() => setPendingOpenUnitId(null)}
+          registerRefresh={(fn) => { activeRefreshRef.current = fn; }}
         />
       )}
       <Toast toast={toast} />
@@ -490,24 +507,23 @@ function EquipmentLogApp({ userEmail }) {
   );
 }
 
-function HomeScreen({ onSelectUnit }) {
+function HomeScreen({ onSelectUnit, registerRefresh }) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const refresh = useCallback(async () => {
     setLoading(true);
-    Promise.all(
+    const groups = await Promise.all(
       EQUIPMENT_TYPES.map((type) => loadUnits(type.key).then((units) => units.map((unit) => ({ type, unit }))))
-    ).then((groups) => {
-      if (!active) return;
-      const flat = groups.flat().sort((a, b) => homeBubbleLabel(a).localeCompare(homeBubbleLabel(b)));
-      setEntries(flat);
-      setLoading(false);
-    });
-    return () => { active = false; };
+    );
+    const flat = groups.flat().sort((a, b) => homeBubbleLabel(a).localeCompare(homeBubbleLabel(b)));
+    setEntries(flat);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { registerRefresh?.(refresh); }, [registerRefresh, refresh]);
 
   const filtered = entries.filter(({ type, unit }) => {
     if (!search.trim()) return true;
@@ -515,6 +531,15 @@ function HomeScreen({ onSelectUnit }) {
     return [unit.unitTag, unit.location, type.homeLabel, unit.manufacturer, unit.model, unit.serial]
       .some((v) => (v || "").toLowerCase().includes(q));
   });
+
+  // Fire pumps (diesel + electric) grouped together, generators in their own
+  // group underneath.
+  const groups = ["Fire Pumps", "Generators"]
+    .map((label) => ({
+      label,
+      entries: filtered.filter(({ type }) => homeGroupLabel(type) === label),
+    }))
+    .filter((g) => g.entries.length > 0);
 
   return (
     <div className="el-page-body">
@@ -541,20 +566,31 @@ function HomeScreen({ onSelectUnit }) {
           <div className="el-empty-sub">Use the tabs above to add a generator or fire pump.</div>
         </div>
       ) : (
-        <div className="el-bubble-row">
-          {filtered.map(({ type, unit }) => (
-            <button
-              key={type.key + unit.id}
-              className={`el-bubble el-bubble-${type.key}`}
-              onClick={() => onSelectUnit(type.key, unit.id)}
-            >
-              {homeBubbleLabel({ type, unit })}
-            </button>
-          ))}
-        </div>
+        groups.map((group) => (
+          <div key={group.label} className="el-home-group">
+            <div className="el-home-group-heading">{group.label}</div>
+            <div className="el-bubble-row">
+              {group.entries.map(({ type, unit }) => (
+                <button
+                  key={type.key + unit.id}
+                  className={`el-bubble el-bubble-${type.key}`}
+                  onClick={() => onSelectUnit(type.key, unit.id)}
+                >
+                  {homeBubbleLabel({ type, unit })}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))
       )}
     </div>
   );
+}
+
+// Fire pumps (diesel + electric) are grouped together on the Home screen;
+// generators get their own group underneath.
+function homeGroupLabel(type) {
+  return type.key === "diesel_generators" ? "Generators" : "Fire Pumps";
 }
 
 // "5451 - Fire Pump" when the unit tag alone doesn't say what it is, or just
@@ -565,7 +601,7 @@ function homeBubbleLabel({ type, unit }) {
   return `${tag} - ${type.singular}`;
 }
 
-function EquipmentSection({ type, showToast, pendingOpenUnitId, onConsumedPendingOpen }) {
+function EquipmentSection({ type, showToast, pendingOpenUnitId, onConsumedPendingOpen, registerRefresh }) {
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -581,6 +617,7 @@ function EquipmentSection({ type, showToast, pendingOpenUnitId, onConsumedPendin
   }, [type.key]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { registerRefresh?.(refresh); }, [registerRefresh, refresh]);
 
   useEffect(() => {
     if (!pendingOpenUnitId) return;
@@ -993,6 +1030,21 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
     }
   }
 
+  const [officialExporting, setOfficialExporting] = useState(false);
+
+  async function handleOfficialExport() {
+    setOfficialExporting(true);
+    try {
+      const bytes = await fillOfficialPdf(type, unit, logs);
+      downloadOfficialPdf(bytes, `${unit.unitTag || "unit"} - ${type.formNo}.pdf`);
+    } catch (err) {
+      console.error("Official form export failed", err);
+      showToast("Couldn't fill the official form — try again", "error");
+    } finally {
+      setOfficialExporting(false);
+    }
+  }
+
   const summaryFields = type.assetFields.filter((f) => f.name !== "notes");
 
   return (
@@ -1012,37 +1064,11 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
             <div className="el-card-thumb el-card-thumb-lg">
               {unit.thumb ? <img src={unit.thumb} alt="" /> : <ImageIcon size={24} />}
             </div>
-            <button className="el-btn-ghost-dark el-btn-ghost-light" onClick={onEdit}>Edit</button>
-          </div>
-
-          <div className="el-detail-grid">
-            {summaryFields.map((f) => (
-              unit[f.name] ? (
-                <div className="el-detail-row" key={f.name}>
-                  <div className="el-detail-label">{f.label}</div>
-                  <div className={`el-detail-value${f.mono ? " el-field-mono" : ""}`}>{String(unit[f.name])}</div>
-                </div>
-              ) : null
-            ))}
-          </div>
-          {unit.notes && (
-            <div className="el-detail-row el-detail-row-notes">
-              <div className="el-detail-label">Notes</div>
-              <div className="el-detail-value">{unit.notes}</div>
-            </div>
-          )}
-
-          <div className="el-log-section-head">
-            <div className="el-section-heading">Test / Run Log</div>
             <div style={{ display: "flex", gap: 8 }}>
-              {type.checklist && logs.length > 0 && (
-                <button className="el-btn-ghost-dark el-btn-ghost-light" onClick={handleExport}>
-                  <FileDown size={13} /> Export PDF
-                </button>
-              )}
               <button className="el-btn-accent" onClick={() => setLogFormOpen((v) => !v)}>
                 <Plus size={13} /> Add Entry
               </button>
+              <button className="el-btn-ghost-dark el-btn-ghost-light" onClick={onEdit}>Edit</button>
             </div>
           </div>
 
@@ -1073,6 +1099,39 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
               </div>
             </div>
           )}
+
+          <div className="el-detail-grid">
+            {summaryFields.map((f) => (
+              unit[f.name] ? (
+                <div className="el-detail-row" key={f.name}>
+                  <div className="el-detail-label">{f.label}</div>
+                  <div className={`el-detail-value${f.mono ? " el-field-mono" : ""}`}>{String(unit[f.name])}</div>
+                </div>
+              ) : null
+            ))}
+          </div>
+          {unit.notes && (
+            <div className="el-detail-row el-detail-row-notes">
+              <div className="el-detail-label">Notes</div>
+              <div className="el-detail-value">{unit.notes}</div>
+            </div>
+          )}
+
+          <div className="el-log-section-head">
+            <div className="el-section-heading">Test / Run Log</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {type.checklist && logs.length > 0 && officialFormAvailable(type.key) && (
+                <button className="el-btn-ghost-dark el-btn-ghost-light" onClick={handleOfficialExport} disabled={officialExporting}>
+                  <FileDown size={13} /> {officialExporting ? "Filling…" : "Export Official Form"}
+                </button>
+              )}
+              {type.checklist && logs.length > 0 && (
+                <button className="el-btn-ghost-dark el-btn-ghost-light" onClick={handleExport}>
+                  <FileDown size={13} /> Export PDF
+                </button>
+              )}
+            </div>
+          </div>
 
           {logsLoading ? (
             <div className="el-loading-row"><span className="el-spinner el-spinner-dark" /></div>
@@ -1154,6 +1213,7 @@ const CSS = `
   --el-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   background: var(--el-bg); color: var(--el-ink); font-family: var(--el-font-body);
   min-height: 100vh;
+  touch-action: pan-x pan-y;
 }
 .el-root button { font-family: inherit; cursor: pointer; }
 .el-root input, .el-root select, .el-root textarea { font-family: inherit; }
@@ -1181,7 +1241,7 @@ const CSS = `
 
 .el-search-wrap { position: relative; margin-top: 20px; }
 .el-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #8A9099; pointer-events: none; display: flex; }
-.el-search-input { width: 100%; background: var(--el-surface); border: 1px solid var(--el-border); color: var(--el-ink); border-radius: 8px; padding: 10px 12px 10px 34px; font-size: 14px; outline: none; box-sizing: border-box; }
+.el-search-input { width: 100%; background: var(--el-surface); border: 1px solid var(--el-border); color: var(--el-ink); border-radius: 8px; padding: 10px 12px 10px 34px; font-size: 16px; outline: none; box-sizing: border-box; }
 .el-search-input:focus { border-color: var(--el-accent); }
 
 .el-page-body { max-width: 1000px; margin: 0 auto; padding: 24px 20px 60px; }
@@ -1193,6 +1253,8 @@ const CSS = `
 @media (min-width: 640px) { .el-grid { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 960px) { .el-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
+.el-home-group + .el-home-group { margin-top: 24px; }
+.el-home-group-heading { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--el-ink-muted); margin-bottom: 10px; }
 .el-bubble-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .el-bubble { background: var(--el-surface); border: 1px solid var(--el-border); border-radius: 999px; padding: 12px 20px; font-size: 14px; font-weight: 700; color: var(--el-ink); box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease; }
 .el-bubble:hover { transform: translateY(-1px); }
@@ -1244,7 +1306,7 @@ const CSS = `
 .el-field { display: block; margin-bottom: 16px; }
 .el-field-label { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--el-ink-muted); font-family: var(--el-font-display); }
 .el-field-label .el-req { color: var(--el-danger); }
-.el-field-input { width: 100%; border: 1px solid var(--el-border); border-radius: 6px; padding: 10px 12px; font-size: 14px; color: var(--el-ink); background: var(--el-surface); outline: none; box-sizing: border-box; }
+.el-field-input { width: 100%; border: 1px solid var(--el-border); border-radius: 6px; padding: 10px 12px; font-size: 16px; color: var(--el-ink); background: var(--el-surface); outline: none; box-sizing: border-box; }
 .el-field-input:focus { border-color: var(--el-accent); }
 .el-field-input-error { border-color: var(--el-danger); }
 .el-field-mono { font-family: var(--el-font-mono); }
@@ -1317,9 +1379,9 @@ const CSS = `
 .el-checklist-item-type { font-size: 9px; font-weight: 700; background: var(--el-chip-bg); color: var(--el-slate-soft); padding: 1px 5px; border-radius: 4px; flex-shrink: 0; }
 .el-checklist-item-ref { font-size: 10px; color: var(--el-ink-muted); flex-shrink: 0; }
 .el-checklist-row-input { flex-shrink: 0; width: 140px; }
-.el-checklist-select { padding: 6px 8px; font-size: 12px; }
+.el-checklist-select { padding: 6px 8px; font-size: 16px; }
 .el-checklist-reading { display: flex; align-items: center; gap: 6px; }
-.el-checklist-reading .el-field-input { padding: 6px 8px; font-size: 12px; }
+.el-checklist-reading .el-field-input { padding: 6px 8px; font-size: 16px; }
 .el-checklist-unit { font-size: 11px; color: var(--el-ink-muted); flex-shrink: 0; }
 
 .el-checklist-view { display: flex; flex-direction: column; gap: 2px; }
