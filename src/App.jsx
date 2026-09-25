@@ -1223,15 +1223,14 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
   );
 }
 
-// Engine running-time meter history (checklist item 1.49), newest first, with
+// Engine running-time meter history (checklist item 1.49), oldest first, with
 // hours run since the previous reading.
 function RuntimeLog({ logs }) {
   const readings = [...logs]
     .sort((a, b) => new Date(a.logDate) - new Date(b.logDate))
     .map((l) => ({ id: l.id, date: l.logDate, hours: parseFloat((l.responses || {})["1.49"]) }))
     .filter((r) => !Number.isNaN(r.hours))
-    .map((r, i, arr) => ({ ...r, ran: i > 0 ? Math.round((r.hours - arr[i - 1].hours) * 10) / 10 : null }))
-    .reverse();
+    .map((r, i, arr) => ({ ...r, ran: i > 0 ? Math.round((r.hours - arr[i - 1].hours) * 10) / 10 : null }));
 
   return (
     <>
@@ -1268,7 +1267,7 @@ function RuntimeLog({ logs }) {
 // 6) and hours run (item 7, or post minus pre when 7 is blank).
 function GeneratorRunLog({ logs }) {
   const rows = [...logs]
-    .sort((a, b) => new Date(b.logDate) - new Date(a.logDate))
+    .sort((a, b) => new Date(a.logDate) - new Date(b.logDate))
     .map((l) => {
       const r = l.responses || {};
       const diff = parseFloat(r["6"]) - parseFloat(r["5"]);
