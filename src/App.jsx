@@ -1214,9 +1214,52 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
               </table>
             </div>
           )}
+
+          {type.key === "diesel_fire_pumps" && !logsLoading && <RuntimeLog logs={logs} />}
         </div>
       </div>
     </div>
+  );
+}
+
+// Engine running-time meter history (checklist item 1.49), newest first, with
+// hours run since the previous reading.
+function RuntimeLog({ logs }) {
+  const readings = [...logs]
+    .sort((a, b) => new Date(a.logDate) - new Date(b.logDate))
+    .map((l) => ({ id: l.id, date: l.logDate, hours: parseFloat((l.responses || {})["1.49"]) }))
+    .filter((r) => !Number.isNaN(r.hours))
+    .map((r, i, arr) => ({ ...r, ran: i > 0 ? Math.round((r.hours - arr[i - 1].hours) * 10) / 10 : null }))
+    .reverse();
+
+  return (
+    <>
+      <div className="el-log-section-head">
+        <div className="el-section-heading">Engine Runtime Log</div>
+      </div>
+      {readings.length === 0 ? (
+        <div className="el-empty-sub" style={{ padding: "4px 0 16px" }}>
+          No runtime readings yet — enter the Engine Running Time Meter (item 1.49) on a log entry.
+        </div>
+      ) : (
+        <div className="el-log-table-wrap">
+          <table className="el-log-table">
+            <thead>
+              <tr><th>Date</th><th>Engine Runtime (hrs)</th><th>Hrs Since Last</th></tr>
+            </thead>
+            <tbody>
+              {readings.map((r) => (
+                <tr key={r.id}>
+                  <td>{r.date}</td>
+                  <td>{r.hours}</td>
+                  <td>{r.ran === null ? "—" : r.ran}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
   );
 }
 
