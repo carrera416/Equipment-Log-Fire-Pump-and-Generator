@@ -1216,6 +1216,7 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
           )}
 
           {type.key === "diesel_fire_pumps" && !logsLoading && <RuntimeLog logs={logs} />}
+          {type.key === "diesel_generators" && !logsLoading && <GeneratorRunLog logs={logs} />}
         </div>
       </div>
     </div>
@@ -1253,6 +1254,51 @@ function RuntimeLog({ logs }) {
                   <td>{r.date}</td>
                   <td>{r.hours}</td>
                   <td>{r.ran === null ? "—" : r.ran}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Generator run history: start/stop times (items 2-3) and hours run (item 7,
+// or post minus pre run-time meter readings, items 6 and 5, when 7 is blank).
+function GeneratorRunLog({ logs }) {
+  const rows = [...logs]
+    .sort((a, b) => new Date(b.logDate) - new Date(a.logDate))
+    .map((l) => {
+      const r = l.responses || {};
+      const diff = parseFloat(r["6"]) - parseFloat(r["5"]);
+      const hrs = r["7"] || (Number.isNaN(diff) ? "" : String(Math.round(diff * 10) / 10));
+      return { id: l.id, date: l.logDate, start: r["2"] || "", stop: r["3"] || "", hrs };
+    })
+    .filter((r) => r.start || r.stop || r.hrs);
+
+  return (
+    <>
+      <div className="el-log-section-head">
+        <div className="el-section-heading">Generator Run Log</div>
+      </div>
+      {rows.length === 0 ? (
+        <div className="el-empty-sub" style={{ padding: "4px 0 16px" }}>
+          No run times yet — enter the engine run start/stop time on a log entry.
+        </div>
+      ) : (
+        <div className="el-log-table-wrap">
+          <table className="el-log-table">
+            <thead>
+              <tr><th>Date</th><th>Start</th><th>Stop</th><th>Run Time (hrs)</th></tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td>{r.date}</td>
+                  <td>{r.start || "—"}</td>
+                  <td>{r.stop || "—"}</td>
+                  <td>{r.hrs || "—"}</td>
                 </tr>
               ))}
             </tbody>
