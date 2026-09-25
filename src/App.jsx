@@ -1264,41 +1264,41 @@ function RuntimeLog({ logs }) {
   );
 }
 
-// Generator run history: start/stop times (items 2-3) and hours run (item 7,
-// or post minus pre run-time meter readings, items 6 and 5, when 7 is blank).
+// Generator engine hours: pre-start and post-run meter readings (items 5 and
+// 6) and hours run (item 7, or post minus pre when 7 is blank).
 function GeneratorRunLog({ logs }) {
   const rows = [...logs]
     .sort((a, b) => new Date(b.logDate) - new Date(a.logDate))
     .map((l) => {
       const r = l.responses || {};
       const diff = parseFloat(r["6"]) - parseFloat(r["5"]);
-      const hrs = r["7"] || (Number.isNaN(diff) ? "" : String(Math.round(diff * 10) / 10));
-      return { id: l.id, date: l.logDate, start: r["2"] || "", stop: r["3"] || "", hrs };
+      const ran = r["7"] || (Number.isNaN(diff) ? "" : String(Math.round(diff * 10) / 10));
+      return { id: l.id, date: l.logDate, pre: r["5"] || "", post: r["6"] || "", ran };
     })
-    .filter((r) => r.start || r.stop || r.hrs);
+    .filter((r) => r.pre || r.post || r.ran);
 
   return (
     <>
       <div className="el-log-section-head">
-        <div className="el-section-heading">Generator Run Log</div>
+        <div className="el-section-heading">Generator Engine Hours</div>
       </div>
       {rows.length === 0 ? (
         <div className="el-empty-sub" style={{ padding: "4px 0 16px" }}>
-          No run times yet — enter the engine run start/stop time on a log entry.
+          No engine hours yet — enter the pre-start and post-run meter readings on a log entry.
         </div>
       ) : (
         <div className="el-log-table-wrap">
           <table className="el-log-table">
             <thead>
-              <tr><th>Date</th><th>Start</th><th>Stop</th><th>Run Time (hrs)</th></tr>
+              <tr><th>Date</th><th>Pre-Start (hrs)</th><th>Post-Run (hrs)</th><th>Hrs Run</th></tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id}>
                   <td>{r.date}</td>
-                  <td>{r.start || "—"}</td>
-                  <td>{r.stop || "—"}</td>
-                  <td>{r.hrs || "—"}</td>
+                  <td>{r.pre || "—"}</td>
+                  <td>{r.post || "—"}</td>
+                  <td>{r.ran || "—"}</td>
                 </tr>
               ))}
             </tbody>
