@@ -12,6 +12,7 @@ import { EQUIPMENT_TYPES, OPTION_LISTS } from "./lib/constants.js";
 import { supabase } from "./lib/supabaseClient.js";
 import { extractFromPhoto } from "./lib/extractNameplate.js";
 import { exportLogsToPdf } from "./lib/exportPdf.js";
+import { fillGeneratorSheet, downloadSheet } from "./lib/fillGeneratorSheet.js";
 import { fillOfficialPdf, downloadOfficialPdf, officialFormAvailable } from "./lib/fillOfficialPdf.js";
 
 function uid() {
@@ -1032,6 +1033,19 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
 
   const [officialExporting, setOfficialExporting] = useState(false);
 
+  async function handleSheetExport() {
+    setOfficialExporting(true);
+    try {
+      const buf = await fillGeneratorSheet(type, unit, logs);
+      downloadSheet(buf, `${unit.unitTag || "generator"} - Emergency Engine Log.xlsx`);
+    } catch (err) {
+      console.error("Sheet export failed", err);
+      showToast("Couldn't fill the spreadsheet — try again", "error");
+    } finally {
+      setOfficialExporting(false);
+    }
+  }
+
   async function handleOfficialExport() {
     setOfficialExporting(true);
     try {
@@ -1123,6 +1137,11 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
               {type.checklist && logs.length > 0 && officialFormAvailable(type.key) && (
                 <button className="el-btn-ghost-dark el-btn-ghost-light" onClick={handleOfficialExport} disabled={officialExporting}>
                   <FileDown size={13} /> {officialExporting ? "Filling…" : "Export Official Form"}
+                </button>
+              )}
+              {type.key === "diesel_generators" && logs.length > 0 && (
+                <button className="el-btn-ghost-dark el-btn-ghost-light" onClick={handleSheetExport} disabled={officialExporting}>
+                  <FileDown size={13} /> {officialExporting ? "Filling…" : "Export Excel Sheet"}
                 </button>
               )}
               {type.checklist && logs.length > 0 && (
