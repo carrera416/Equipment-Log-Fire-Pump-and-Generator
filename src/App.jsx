@@ -1316,7 +1316,8 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
             </div>
           )}
 
-          {type.key === "diesel_fire_pumps" && !logsLoading && <RuntimeLog logs={logs} />}
+          {type.key === "diesel_fire_pumps" && !logsLoading && <RuntimeLog logs={logs} legacyPostId="1.49" />}
+          {type.key === "electric_fire_pumps" && !logsLoading && <RuntimeLog logs={logs} />}
           {type.key === "diesel_generators" && !logsLoading && <GeneratorRunLog logs={logs} />}
         </div>
       </div>
@@ -1324,36 +1325,43 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
   );
 }
 
-// Engine running-time meter history (checklist item 1.49), oldest first, with
-// hours run since the previous reading.
-function RuntimeLog({ logs }) {
-  const readings = [...logs]
+// Fire pump engine hours: pre-start and post-run meter readings and hours run
+// (post minus pre). Older diesel entries that only have the Engine Running
+// Time Meter (item 1.49) show it as the post-run reading.
+function RuntimeLog({ logs, legacyPostId }) {
+  const rows = [...logs]
     .sort((a, b) => new Date(a.logDate) - new Date(b.logDate))
-    .map((l) => ({ id: l.id, date: l.logDate, hours: parseFloat((l.responses || {})["1.49"]) }))
-    .filter((r) => !Number.isNaN(r.hours))
-    .map((r, i, arr) => ({ ...r, ran: i > 0 ? Math.round((r.hours - arr[i - 1].hours) * 10) / 10 : null }));
+    .map((l) => {
+      const r = l.responses || {};
+      const pre = r.pre || "";
+      const post = r.post || (legacyPostId ? r[legacyPostId] : "") || "";
+      const diff = parseFloat(post) - parseFloat(pre);
+      return { id: l.id, date: l.logDate, pre, post, ran: Number.isNaN(diff) ? "" : String(Math.round(diff * 10) / 10) };
+    })
+    .filter((r) => r.pre || r.post);
 
   return (
     <>
       <div className="el-log-section-head">
         <div className="el-section-heading">Engine Runtime Log</div>
       </div>
-      {readings.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="el-empty-sub" style={{ padding: "4px 0 16px" }}>
-          No runtime readings yet — enter the Engine Running Time Meter (item 1.49) on a log entry.
+          No runtime readings yet — enter the pre-start and post-run readings on a log entry.
         </div>
       ) : (
         <div className="el-log-table-wrap">
           <table className="el-log-table">
             <thead>
-              <tr><th>Date</th><th>Engine Runtime (hrs)</th><th>Hrs Since Last</th></tr>
+              <tr><th>Date</th><th>Pre-Start (hrs)</th><th>Post-Run (hrs)</th><th>Hrs Run</th></tr>
             </thead>
             <tbody>
-              {readings.map((r) => (
+              {rows.map((r) => (
                 <tr key={r.id}>
                   <td>{r.date}</td>
-                  <td>{r.hours}</td>
-                  <td>{r.ran === null ? "—" : r.ran}</td>
+                  <td>{r.pre || "—"}</td>
+                  <td>{r.post || "—"}</td>
+                  <td>{r.ran || "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -1513,6 +1521,11 @@ const CSS = `
 .el-modal-footer { flex-shrink: 0; padding: 16px 20px; display: flex; gap: 12px; border-top: 1px solid var(--el-border); background: var(--el-bg); }
 
 .el-field { display: block; margin-bottom: 16px; }
+.el-field { min-width: 0; }
+.el-form-grid > * { min-width: 0; }
+/* iOS/Android render date inputs wider than their box unless reset */
+.el-root input[type="date"].el-field-input { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; width: 100%; min-height: 44px; text-align: left; }
+.el-root input[type="date"].el-field-input::-webkit-date-and-time-value { text-align: left; min-width: 0; }
 .el-field-label-strong { font-weight: 900 !important; font-size: 13px !important; color: var(--el-ink) !important; }
 .el-field-label { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--el-ink-muted); font-family: var(--el-font-display); }
 .el-field-label .el-req { color: var(--el-danger); }

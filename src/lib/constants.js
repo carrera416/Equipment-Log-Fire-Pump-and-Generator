@@ -172,6 +172,8 @@ const FIRE_PUMP_LOG_FIELDS = [
 // item's `id` matches the form's item number so entries can be cross-
 // referenced against a paper/PDF copy if needed.
 export const ELECTRIC_FIRE_PUMP_CHECKLIST = [
+  { id: "pre", section: "Run-Time Meter", type: "I", label: "Prestart Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", unit: "hrs", cumulative: true, formField: "start" },
+  { id: "post", section: "Run-Time Meter", type: "I", label: "Post Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", unit: "hrs", cumulative: true, formField: "end" },
   { id: "1.1", section: "Fire Pump Start/Stop Pressures", type: "T", label: "Fire Pump Start Pressure", ref: "8.3.2.8(1)(f)", valueType: "reading", unit: "psi" },
   { id: "1.2", section: "Fire Pump Start/Stop Pressures", type: "T", label: "Fire Pump Stop Pressure", ref: "8.3.2.8(1)(f)", valueType: "reading", unit: "psi" },
   { id: "1.3", section: "Fire Pump Start/Stop Pressures", type: "T", label: "Pressure Maintenance Pump Start Pressure", ref: "8.3.2.8(1)(g)", valueType: "reading", unit: "psi" },
@@ -216,6 +218,8 @@ export const ELECTRIC_FIRE_PUMP_CHECKLIST = [
 // Checklist items transcribed from Form AES 5.1 ("Diesel Fire Pump —
 // Weekly", CCR Title 19 / NFPA 25 Table 8.5.3 reference).
 export const DIESEL_FIRE_PUMP_CHECKLIST = [
+  { id: "pre", section: "Run-Time Meter", type: "I", label: "Prestart Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", unit: "hrs", cumulative: true, formField: "start" },
+  { id: "post", section: "Run-Time Meter", type: "I", label: "Post Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", unit: "hrs", cumulative: true, formField: "end" },
   { id: "1.1", section: "Fire Pump Start/Stop Pressures", type: "T", label: "Fire Pump Start Pressure", ref: "8.3.2.8(1)(f)", valueType: "reading", unit: "psi" },
   { id: "1.2", section: "Fire Pump Start/Stop Pressures", type: "T", label: "Fire Pump Stop Pressure", ref: "8.3.2.8(1)(f)", valueType: "reading", unit: "psi" },
   { id: "1.3", section: "Fire Pump Start/Stop Pressures", type: "T", label: "Pressure Maintenance Pump Start Pressure", ref: "8.3.2.8(1)(g)", valueType: "reading", unit: "psi" },
