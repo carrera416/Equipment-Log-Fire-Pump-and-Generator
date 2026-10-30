@@ -95,6 +95,15 @@ function emptyLogForm(type) {
   return f;
 }
 
+// True when a reading item has acceptable ranges and the entered number is
+// outside all of them. Blank/non-numeric values are never flagged.
+function isOutOfRange(item, value) {
+  if (!item.ranges) return false;
+  const n = parseFloat(value);
+  if (Number.isNaN(n)) return false;
+  return !item.ranges.some(([min, max]) => (min === null || n >= min) && (max === null || n <= max));
+}
+
 function countChecklistFails(responses) {
   if (!responses) return 0;
   return Object.values(responses).filter((v) => v === "Fail").length;
@@ -215,7 +224,7 @@ function ChecklistFields({ checklist, responses, onChange }) {
                 ) : (
                   <div className="el-checklist-reading">
                     <input
-                      className="el-field-input"
+                      className={`el-field-input${isOutOfRange(item, responses[item.id]) ? " el-out-of-range" : ""}`}
                       type="text"
                       inputMode={item.valueType === "reading" ? "decimal" : "text"}
                       value={responses[item.id] || ""}
@@ -243,7 +252,7 @@ function ChecklistView({ checklist, responses }) {
         <div className="el-checklist-view-row" key={item.id}>
           <span className="el-checklist-item-id">{item.id}</span>
           <span className="el-checklist-view-label">{item.label}</span>
-          <span className={`el-checklist-view-value${responses[item.id] === "Fail" ? " el-checklist-view-fail" : ""}`}>
+          <span className={`el-checklist-view-value${responses[item.id] === "Fail" || isOutOfRange(item, responses[item.id]) ? " el-checklist-view-fail" : ""}`}>
             {responses[item.id]}{item.unit ? ` ${item.unit}` : ""}
           </span>
         </div>
@@ -1496,6 +1505,7 @@ const CSS = `
 .el-checklist-view-label { flex: 1; color: var(--el-ink); }
 .el-checklist-view-value { font-weight: 700; color: var(--el-ink); }
 .el-checklist-view-fail { color: var(--el-danger); }
+.el-root .el-field-input.el-out-of-range { border-color: var(--el-danger); background: var(--el-danger-soft); color: var(--el-danger); font-weight: 700; }
 
 .el-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.2); color: #fff; font-size: 14px; z-index: 60; max-width: 90vw; }
 .el-toast-success { background: var(--el-slate); }
