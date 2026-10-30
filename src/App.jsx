@@ -95,13 +95,45 @@ function emptyLogForm(type) {
   return f;
 }
 
-// True when a reading item has acceptable ranges and the entered number is
-// outside all of them. Blank/non-numeric values are never flagged.
-function isOutOfRange(item, value) {
-  if (!item.ranges) return false;
+// How far a reading may drift from the unit's own history before it's flagged.
+const HISTORY_TOLERANCE = 0.1; // +/- 10% of the running average
+const HISTORY_MIN_SAMPLES = 2; // need this many earlier passing entries first
+
+// Average of each numeric reading across this unit's earlier PASSING log
+// entries (only those dated before `beforeDate` when given), so the band keeps
+// adjusting as more entries are logged.
+function buildBaselines(checklist, logs, beforeDate) {
+  const out = {};
+  for (const item of checklist) {
+    if (item.valueType !== "reading" || item.noTrend) continue;
+    const nums = logs
+      .filter((l) => l.overallResult === "Pass" && (!beforeDate || l.logDate < beforeDate))
+      .map((l) => parseFloat((l.responses || {})[item.id]))
+      .filter((n) => !Number.isNaN(n));
+    if (nums.length >= HISTORY_MIN_SAMPLES) {
+      out[item.id] = { mean: nums.reduce((a, n) => a + n, 0) / nums.length, n: nums.length };
+    }
+  }
+  return out;
+}
+
+// True when a reading is outside the template's acceptable range, or outside
+// +/-10% of this unit's own average from earlier passing entries. Blank or
+// non-numeric values are never flagged.
+function isOutOfRange(item, value, baseline) {
   const n = parseFloat(value);
   if (Number.isNaN(n)) return false;
-  return !item.ranges.some(([min, max]) => (min === null || n >= min) && (max === null || n <= max));
+  if (item.ranges && !item.ranges.some(([min, max]) => (min === null || n >= min) && (max === null || n <= max))) return true;
+  if (baseline && baseline.mean !== 0) return Math.abs(n - baseline.mean) > Math.abs(baseline.mean) * HISTORY_TOLERANCE;
+  return false;
+}
+
+function rangeHint(item, value, baseline) {
+  if (!isOutOfRange(item, value, baseline)) return undefined;
+  const parts = [];
+  if (item.ranges) parts.push(`Acceptable: ${item.ref}`);
+  if (baseline) parts.push(`Past average ${Math.round(baseline.mean * 100) / 100} (${baseline.n} passing entries), +/-10%`);
+  return parts.join(" - ");
 }
 
 function countChecklistFails(responses) {
@@ -194,7 +226,7 @@ function groupChecklist(checklist) {
 // Renders the itemized NFPA 25 / CCR Title 19 checklist for one log entry —
 // "check" items get a Pass/Fail/N/A select, "reading" items a numeric input
 // with the form's unit suffixed.
-function ChecklistFields({ checklist, responses, onChange }) {
+function ChecklistFields({ checklist, responses, onChange, baselines = {} }) {
   const sections = groupChecklist(checklist);
   return (
     <div className="el-checklist">
@@ -224,7 +256,8 @@ function ChecklistFields({ checklist, responses, onChange }) {
                 ) : (
                   <div className="el-checklist-reading">
                     <input
-                      className={`el-field-input${isOutOfRange(item, responses[item.id]) ? " el-out-of-range" : ""}`}
+                      className={`el-field-input${isOutOfRange(item, responses[item.id], baselines[item.id]) ? " el-out-of-range" : ""}`}
+                      title={rangeHint(item, responses[item.id], baselines[item.id])}
                       type="text"
                       inputMode={item.valueType === "reading" ? "decimal" : "text"}
                       value={responses[item.id] || ""}
@@ -243,7 +276,7 @@ function ChecklistFields({ checklist, responses, onChange }) {
 }
 
 // Read-only expansion of a saved log entry's checklist responses.
-function ChecklistView({ checklist, responses }) {
+function ChecklistView({ checklist, responses, baselines = {} }) {
   const answered = checklist.filter((item) => (responses[item.id] || "").toString().trim() !== "");
   if (answered.length === 0) return <div className="el-empty-sub">No checklist items recorded.</div>;
   return (
@@ -252,7 +285,7 @@ function ChecklistView({ checklist, responses }) {
         <div className="el-checklist-view-row" key={item.id}>
           <span className="el-checklist-item-id">{item.id}</span>
           <span className="el-checklist-view-label">{item.label}</span>
-          <span className={`el-checklist-view-value${responses[item.id] === "Fail" || isOutOfRange(item, responses[item.id]) ? " el-checklist-view-fail" : ""}`}>
+          <span className={`el-checklist-view-value${responses[item.id] === "Fail" || isOutOfRange(item, responses[item.id], baselines[item.id]) ? " el-checklist-view-fail" : ""}`}>
             {responses[item.id]}{item.unit ? ` ${item.unit}` : ""}
           </span>
         </div>
@@ -1112,6 +1145,7 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
                   checklist={type.checklist}
                   responses={logForm.responses}
                   onChange={setResponse}
+                  baselines={buildBaselines(type.checklist, logs)}
                 />
               )}
               <div className="el-log-form-actions">
@@ -1212,7 +1246,7 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
                               {l.notes && (
                                 <div className="el-log-expanded-notes"><strong>Deficiencies / Comments:</strong> {l.notes}</div>
                               )}
-                              <ChecklistView checklist={type.checklist} responses={l.responses || {}} />
+                              <ChecklistView checklist={type.checklist} responses={l.responses || {}} baselines={buildBaselines(type.checklist, logs, l.logDate)} />
                             </td>
                           </tr>
                         )}
