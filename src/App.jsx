@@ -517,6 +517,9 @@ function EquipmentLogApp({ userEmail }) {
             <div>
               <div className="el-brand-title">Equipment Log</div>
               <div className="el-brand-subtitle">Generators &amp; Fire Pumps</div>
+              <div className="el-build-stamp">
+                Updated {new Date(__BUILD_TIME__).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+              </div>
             </div>
             <div className="el-topbar-actions">
               <button className="el-btn-ghost-dark" onClick={handleRefresh} disabled={refreshing} title="Refresh">
@@ -1428,6 +1431,7 @@ const CSS = `
 .el-topbar-inner { max-width: 1000px; margin: 0 auto; }
 .el-topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .el-brand-title { font-family: var(--el-font-display); font-weight: 900; font-size: 26px; letter-spacing: -0.02em; text-transform: uppercase; color: #fff; line-height: 1.1; }
+.el-build-stamp { font-size: 10px; color: #7E8791; margin-top: 2px; letter-spacing: 0.04em; }
 .el-brand-subtitle { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #9CA3AC; margin-top: 2px; }
 .el-topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .el-btn-ghost-dark { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--el-slate-border); color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 9px 12px; border-radius: 8px; white-space: nowrap; }
