@@ -1047,6 +1047,7 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
     setLogForm((f) => ({ ...f, [name]: value }));
   }
 
+  const baselinesNow = type.checklist ? buildBaselines(type.checklist, logs) : {};
   const startItem = type.checklist?.find((i) => i.formField === "start");
   const endItem = type.checklist?.find((i) => i.formField === "end");
 
@@ -1155,11 +1156,12 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
                       onChange={(v) => setLogField(field.name, v)}
                     />
                     {field.name === "logDate" && startItem && (
-                      <Field label={startItem.label.replace("Record ", "")}>
+                      <Field label={`${startItem.label.replace("Record ", "")} (hrs)`}>
                         <input
-                          className="el-field-input"
+                          className={`el-field-input${isOutOfRange(startItem, logForm.responses[startItem.id], baselinesNow[startItem.id]) ? " el-out-of-range" : isInRange(startItem, logForm.responses[startItem.id], baselinesNow[startItem.id]) ? " el-in-range" : ""}`}
                           type="text"
-                          placeholder="e.g. 8:00am"
+                          inputMode="decimal"
+                          placeholder="##.#"
                           value={logForm.responses[startItem.id] || ""}
                           onChange={(e) => setResponse(startItem.id, e.target.value)}
                         />
@@ -1173,15 +1175,16 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
                   checklist={type.checklist}
                   responses={logForm.responses}
                   onChange={setResponse}
-                  baselines={buildBaselines(type.checklist, logs)}
+                  baselines={baselinesNow}
                 />
               )}
               {endItem && (
-                <Field label={endItem.label.replace("Record ", "")}>
+                <Field label={`${endItem.label.replace("Record ", "")} (hrs)`}>
                   <input
-                    className="el-field-input"
+                    className={`el-field-input${isOutOfRange(endItem, logForm.responses[endItem.id], baselinesNow[endItem.id]) ? " el-out-of-range" : isInRange(endItem, logForm.responses[endItem.id], baselinesNow[endItem.id]) ? " el-in-range" : ""}`}
                     type="text"
-                    placeholder="e.g. 8:30am"
+                    inputMode="decimal"
+                    placeholder="##.#"
                     value={logForm.responses[endItem.id] || ""}
                     onChange={(e) => setResponse(endItem.id, e.target.value)}
                   />

@@ -73,11 +73,11 @@ const NONE_OR_FAIL_OPTIONS = ["None", "Fail"];
 // A reading item may carry `ranges`: acceptable [min, max] pairs (null = open
 // ended). A value outside every pair is flagged red in the log form/view.
 export const DIESEL_GENERATOR_CHECKLIST = [
-  { id: "2", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Run Start Time", ref: "Start time, am/pm", valueType: "text", formField: "start" },
-  { id: "3", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Stop Time", ref: "End time, am/pm", valueType: "text", formField: "end" },
+  { id: "2", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Run Start Time", ref: "Start time, am/pm", valueType: "text" },
+  { id: "3", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Stop Time", ref: "End time, am/pm", valueType: "text" },
   { id: "4", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Reason for Operation", ref: "Test, Emergency, Other", valueType: "select", options: OPERATION_REASON_OPTIONS },
-  { id: "5", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Prestart Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", cumulative: true, unit: "hrs" },
-  { id: "6", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Post Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", cumulative: true, unit: "hrs" },
+  { id: "5", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Prestart Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", cumulative: true, formField: "start", unit: "hrs" },
+  { id: "6", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Post Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", cumulative: true, formField: "end", unit: "hrs" },
   { id: "7", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Subtract Difference Between Post and Pre Run-Time Reading", ref: "Run time difference", valueType: "reading", unit: "hrs" },
   { id: "9", section: "Generator Maintenance Checklist", type: "I", label: "Check Crankcase Engine Oil Level", ref: "As indicated on dipstick", valueType: "check" },
   { id: "10", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Level - Main Tank", ref: "Min 2/3 full", valueType: "select", options: FUEL_LEVEL_OPTIONS },
