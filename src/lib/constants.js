@@ -65,13 +65,16 @@ const NONE_OR_FAIL_OPTIONS = ["None", "Fail"];
 // "select" (own `options` array), "text" (free text, no numeric keypad),
 // "reading" (numeric, gets a decimal keypad on mobile), or "check"
 // (Pass/Fail/N/A).
+// `formField` ("start"/"end") pulls an item out of the checklist list and into the
+// top/bottom of the log entry form as its own fill-in box (its answer is still
+// stored in `responses`, so exports are unaffected).
 // `cumulative` marks hour-meter readings that only climb; they are compared to
 // the latest passing reading instead of the average.
 // A reading item may carry `ranges`: acceptable [min, max] pairs (null = open
 // ended). A value outside every pair is flagged red in the log form/view.
 export const DIESEL_GENERATOR_CHECKLIST = [
-  { id: "2", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Run Start Time", ref: "Start time, am/pm", valueType: "text" },
-  { id: "3", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Stop Time", ref: "End time, am/pm", valueType: "text" },
+  { id: "2", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Run Start Time", ref: "Start time, am/pm", valueType: "text", formField: "start" },
+  { id: "3", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Stop Time", ref: "End time, am/pm", valueType: "text", formField: "end" },
   { id: "4", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Reason for Operation", ref: "Test, Emergency, Other", valueType: "select", options: OPERATION_REASON_OPTIONS },
   { id: "5", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Prestart Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", cumulative: true, unit: "hrs" },
   { id: "6", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Post Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", cumulative: true, unit: "hrs" },

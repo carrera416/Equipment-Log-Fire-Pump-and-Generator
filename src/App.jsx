@@ -132,6 +132,14 @@ function isOutOfRange(item, value, baseline) {
   return false;
 }
 
+// True when a reading has something to be checked against (template range or
+// the unit's own history), is numeric, and falls within it.
+function isInRange(item, value, baseline) {
+  if (Number.isNaN(parseFloat(value))) return false;
+  if (!item.ranges && !baseline) return false;
+  return !isOutOfRange(item, value, baseline);
+}
+
 function rangeHint(item, value, baseline) {
   if (!isOutOfRange(item, value, baseline)) return undefined;
   const parts = [];
@@ -232,7 +240,7 @@ function groupChecklist(checklist) {
 // "check" items get a Pass/Fail/N/A select, "reading" items a numeric input
 // with the form's unit suffixed.
 function ChecklistFields({ checklist, responses, onChange, baselines = {} }) {
-  const sections = groupChecklist(checklist);
+  const sections = groupChecklist(checklist.filter((item) => !item.formField));
   return (
     <div className="el-checklist">
       {sections.map((section) => (
@@ -261,7 +269,7 @@ function ChecklistFields({ checklist, responses, onChange, baselines = {} }) {
                 ) : (
                   <div className="el-checklist-reading">
                     <input
-                      className={`el-field-input${isOutOfRange(item, responses[item.id], baselines[item.id]) ? " el-out-of-range" : ""}`}
+                      className={`el-field-input${isOutOfRange(item, responses[item.id], baselines[item.id]) ? " el-out-of-range" : isInRange(item, responses[item.id], baselines[item.id]) ? " el-in-range" : ""}`}
                       title={rangeHint(item, responses[item.id], baselines[item.id])}
                       type="text"
                       inputMode={item.valueType === "reading" ? "decimal" : "text"}
@@ -290,7 +298,7 @@ function ChecklistView({ checklist, responses, baselines = {} }) {
         <div className="el-checklist-view-row" key={item.id}>
           <span className="el-checklist-item-id">{item.id}</span>
           <span className="el-checklist-view-label">{item.label}</span>
-          <span className={`el-checklist-view-value${responses[item.id] === "Fail" || isOutOfRange(item, responses[item.id], baselines[item.id]) ? " el-checklist-view-fail" : ""}`}>
+          <span className={`el-checklist-view-value${responses[item.id] === "Fail" || isOutOfRange(item, responses[item.id], baselines[item.id]) ? " el-checklist-view-fail" : isInRange(item, responses[item.id], baselines[item.id]) ? " el-checklist-view-ok" : ""}`}>
             {responses[item.id]}{item.unit ? ` ${item.unit}` : ""}
           </span>
         </div>
@@ -1039,6 +1047,9 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
     setLogForm((f) => ({ ...f, [name]: value }));
   }
 
+  const startItem = type.checklist?.find((i) => i.formField === "start");
+  const endItem = type.checklist?.find((i) => i.formField === "end");
+
   function setResponse(itemId, value) {
     setLogForm((f) => ({ ...f, responses: { ...f.responses, [itemId]: value } }));
   }
@@ -1137,12 +1148,24 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
             <div className="el-log-form">
               <div className="el-form-grid">
                 {type.logFields.map((field) => (
-                  <FormField
-                    key={field.name}
-                    field={field}
-                    value={logForm[field.name]}
-                    onChange={(v) => setLogField(field.name, v)}
-                  />
+                  <React.Fragment key={field.name}>
+                    <FormField
+                      field={field}
+                      value={logForm[field.name]}
+                      onChange={(v) => setLogField(field.name, v)}
+                    />
+                    {field.name === "logDate" && startItem && (
+                      <Field label={startItem.label.replace("Record ", "")}>
+                        <input
+                          className="el-field-input"
+                          type="text"
+                          placeholder="e.g. 8:00am"
+                          value={logForm.responses[startItem.id] || ""}
+                          onChange={(e) => setResponse(startItem.id, e.target.value)}
+                        />
+                      </Field>
+                    )}
+                  </React.Fragment>
                 ))}
               </div>
               {type.checklist && (
@@ -1152,6 +1175,17 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
                   onChange={setResponse}
                   baselines={buildBaselines(type.checklist, logs)}
                 />
+              )}
+              {endItem && (
+                <Field label={endItem.label.replace("Record ", "")}>
+                  <input
+                    className="el-field-input"
+                    type="text"
+                    placeholder="e.g. 8:30am"
+                    value={logForm.responses[endItem.id] || ""}
+                    onChange={(e) => setResponse(endItem.id, e.target.value)}
+                  />
+                </Field>
               )}
               <div className="el-log-form-actions">
                 <button className="el-btn-text-muted" onClick={() => setLogFormOpen(false)}>Cancel</button>
@@ -1544,6 +1578,8 @@ const CSS = `
 .el-checklist-view-label { flex: 1; color: var(--el-ink); }
 .el-checklist-view-value { font-weight: 700; color: var(--el-ink); }
 .el-checklist-view-fail { color: var(--el-danger); }
+.el-checklist-view-ok { color: var(--el-success); }
+.el-root .el-field-input.el-in-range { border-color: var(--el-success); background: var(--el-success-soft); color: var(--el-success); font-weight: 700; }
 .el-root .el-field-input.el-out-of-range { border-color: var(--el-danger); background: var(--el-danger-soft); color: var(--el-danger); font-weight: 700; }
 
 .el-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.2); color: #fff; font-size: 14px; z-index: 60; max-width: 90vw; }
