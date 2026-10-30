@@ -65,17 +65,17 @@ const NONE_OR_FAIL_OPTIONS = ["None", "Fail"];
 // "select" (own `options` array), "text" (free text, no numeric keypad),
 // "reading" (numeric, gets a decimal keypad on mobile), or "check"
 // (Pass/Fail/N/A).
-// `noTrend` marks cumulative/derived readings (hour meters, run time) that are
-// excluded from the history-based band.
+// `cumulative` marks hour-meter readings that only climb; they are compared to
+// the latest passing reading instead of the average.
 // A reading item may carry `ranges`: acceptable [min, max] pairs (null = open
 // ended). A value outside every pair is flagged red in the log form/view.
 export const DIESEL_GENERATOR_CHECKLIST = [
   { id: "2", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Run Start Time", ref: "Start time, am/pm", valueType: "text" },
   { id: "3", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Engine Stop Time", ref: "End time, am/pm", valueType: "text" },
   { id: "4", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Reason for Operation", ref: "Test, Emergency, Other", valueType: "select", options: OPERATION_REASON_OPTIONS },
-  { id: "5", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Prestart Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", noTrend: true, unit: "hrs" },
-  { id: "6", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Post Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", noTrend: true, unit: "hrs" },
-  { id: "7", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Subtract Difference Between Post and Pre Run-Time Reading", ref: "Run time difference", valueType: "reading", noTrend: true, unit: "hrs" },
+  { id: "5", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Prestart Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", cumulative: true, unit: "hrs" },
+  { id: "6", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Record Post Run-Time Reading", ref: "From non-resettable meter (##.#)", valueType: "reading", cumulative: true, unit: "hrs" },
+  { id: "7", section: "Required by Air Permit (Generator & Fire Pump)", type: "I", label: "Subtract Difference Between Post and Pre Run-Time Reading", ref: "Run time difference", valueType: "reading", unit: "hrs" },
   { id: "9", section: "Generator Maintenance Checklist", type: "I", label: "Check Crankcase Engine Oil Level", ref: "As indicated on dipstick", valueType: "check" },
   { id: "10", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Level - Main Tank", ref: "Min 2/3 full", valueType: "select", options: FUEL_LEVEL_OPTIONS },
   { id: "11", section: "Generator Maintenance Checklist", type: "I", label: "Verify Fuel Level - Day Tank (If Applicable)", ref: "Min 2/3 full", valueType: "select", options: FUEL_LEVEL_OPTIONS },
@@ -266,7 +266,7 @@ export const DIESEL_FIRE_PUMP_CHECKLIST = [
   { id: "1.46", section: "Electrical System Conditions", type: "I", label: "Electrolyte Level in Batteries is Within Acceptable Range", ref: "8.2.2(4)(k), Table 8.1.2", valueType: "check" },
   { id: "1.47", section: "Electrical System Conditions", type: "I", label: "Battery Terminals are Free from Corrosion", ref: "8.2.2(4)(l)", valueType: "check" },
   { id: "1.48", section: "Electrical System Conditions", type: "I", label: "Cranking Voltage (9V on 12V System / 18V on 24V System)", ref: "Table 8.1.2", valueType: "reading", unit: "V" },
-  { id: "1.49", section: "Diesel Engine System", type: "I", label: "Engine Running Time Meter is Reading", ref: "8.2.2(4)(g)", valueType: "reading", noTrend: true, unit: "hrs" },
+  { id: "1.49", section: "Diesel Engine System", type: "I", label: "Engine Running Time Meter is Reading", ref: "8.2.2(4)(g)", valueType: "reading", cumulative: true, unit: "hrs" },
   { id: "1.50", section: "Diesel Engine System", type: "I", label: "Oil Level in Right Angle Gear Drive is within Acceptable Range", ref: "8.2.2(4)(h)", valueType: "check" },
   { id: "1.51", section: "Diesel Engine System", type: "I", label: "Cooling Water Level is within Acceptable Range", ref: "8.2.2(4)(j)", valueType: "check" },
   { id: "1.52", section: "Diesel Engine System", type: "I", label: "Water Jacket Heater is Operating", ref: "8.2.2(4)(m)", valueType: "check" },

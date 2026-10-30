@@ -105,12 +105,16 @@ const HISTORY_MIN_SAMPLES = 2; // need this many earlier passing entries first
 function buildBaselines(checklist, logs, beforeDate) {
   const out = {};
   for (const item of checklist) {
-    if (item.valueType !== "reading" || item.noTrend) continue;
+    if (item.valueType !== "reading") continue;
     const nums = logs
       .filter((l) => l.overallResult === "Pass" && (!beforeDate || l.logDate < beforeDate))
+      .sort((a, b) => (a.logDate < b.logDate ? -1 : 1))
       .map((l) => parseFloat((l.responses || {})[item.id]))
       .filter((n) => !Number.isNaN(n));
-    if (nums.length >= HISTORY_MIN_SAMPLES) {
+    if (item.cumulative) {
+      // Hour meters only climb, so compare to the latest passing reading.
+      if (nums.length >= 1) out[item.id] = { mean: nums[nums.length - 1], n: 1, last: true };
+    } else if (nums.length >= HISTORY_MIN_SAMPLES) {
       out[item.id] = { mean: nums.reduce((a, n) => a + n, 0) / nums.length, n: nums.length };
     }
   }
@@ -132,7 +136,8 @@ function rangeHint(item, value, baseline) {
   if (!isOutOfRange(item, value, baseline)) return undefined;
   const parts = [];
   if (item.ranges) parts.push(`Acceptable: ${item.ref}`);
-  if (baseline) parts.push(`Past average ${Math.round(baseline.mean * 100) / 100} (${baseline.n} passing entries), +/-10%`);
+  if (baseline?.last) parts.push(`Last passing reading ${baseline.mean}, +/-10%`);
+  else if (baseline) parts.push(`Past average ${Math.round(baseline.mean * 100) / 100} (${baseline.n} passing entries), +/-10%`);
   return parts.join(" - ");
 }
 
