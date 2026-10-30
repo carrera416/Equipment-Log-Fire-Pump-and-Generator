@@ -164,10 +164,10 @@ function Toast({ toast }) {
   );
 }
 
-function Field({ label, required, span, children }) {
+function Field({ label, required, span, strong, children }) {
   return (
     <div className="el-field" style={span === 2 ? { gridColumn: "1 / -1" } : undefined}>
-      <label className="el-field-label">{label} {required && <span className="el-req">*</span>}</label>
+      <label className={`el-field-label${strong ? " el-field-label-strong" : ""}`}>{label} {required && <span className="el-req">*</span>}</label>
       {children}
     </div>
   );
@@ -1055,7 +1055,15 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
     setLogForm((f) => ({ ...f, responses: { ...f.responses, [itemId]: value } }));
   }
 
+  const missingHours = [startItem, endItem].filter(
+    (it) => it && !String(logForm.responses[it.id] || "").trim()
+  );
+
   async function handleAddLog() {
+    if (missingHours.length > 0) {
+      showToast("Enter both the pre-start and post-run readings first", "error");
+      return;
+    }
     setLogSaving(true);
     try {
       await insertLog(type.logTable, { ...logForm, unitId: unit.id });
@@ -1156,7 +1164,7 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
                       onChange={(v) => setLogField(field.name, v)}
                     />
                     {field.name === "logDate" && startItem && (
-                      <Field label={`${startItem.label.replace("Record ", "")} (hrs)`}>
+                      <Field strong required label={`${startItem.label.replace("Record ", "")} (hrs)`}>
                         <input
                           className={`el-field-input${isOutOfRange(startItem, logForm.responses[startItem.id], baselinesNow[startItem.id]) ? " el-out-of-range" : isInRange(startItem, logForm.responses[startItem.id], baselinesNow[startItem.id]) ? " el-in-range" : ""}`}
                           type="text"
@@ -1179,7 +1187,7 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
                 />
               )}
               {endItem && (
-                <Field label={`${endItem.label.replace("Record ", "")} (hrs)`}>
+                <Field strong required label={`${endItem.label.replace("Record ", "")} (hrs)`}>
                   <input
                     className={`el-field-input${isOutOfRange(endItem, logForm.responses[endItem.id], baselinesNow[endItem.id]) ? " el-out-of-range" : isInRange(endItem, logForm.responses[endItem.id], baselinesNow[endItem.id]) ? " el-in-range" : ""}`}
                     type="text"
@@ -1190,9 +1198,14 @@ function DetailModal({ type, unit, onClose, onEdit, showToast }) {
                   />
                 </Field>
               )}
+              {missingHours.length > 0 && (
+                <div className="el-form-hint-error">
+                  Both the pre-start and post-run readings are required before this entry can be saved.
+                </div>
+              )}
               <div className="el-log-form-actions">
                 <button className="el-btn-text-muted" onClick={() => setLogFormOpen(false)}>Cancel</button>
-                <button className="el-btn el-btn-save el-btn-inline" onClick={handleAddLog} disabled={logSaving}>
+                <button className="el-btn el-btn-save el-btn-inline" onClick={handleAddLog} disabled={logSaving || missingHours.length > 0}>
                   {logSaving && <span className="el-spinner" />} Save Entry
                 </button>
               </div>
@@ -1496,6 +1509,7 @@ const CSS = `
 .el-modal-footer { flex-shrink: 0; padding: 16px 20px; display: flex; gap: 12px; border-top: 1px solid var(--el-border); background: var(--el-bg); }
 
 .el-field { display: block; margin-bottom: 16px; }
+.el-field-label-strong { font-weight: 900 !important; font-size: 13px !important; color: var(--el-ink) !important; }
 .el-field-label { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--el-ink-muted); font-family: var(--el-font-display); }
 .el-field-label .el-req { color: var(--el-danger); }
 .el-field-input { width: 100%; border: 1px solid var(--el-border); border-radius: 6px; padding: 10px 12px; font-size: 16px; color: var(--el-ink); background: var(--el-surface); outline: none; box-sizing: border-box; }
@@ -1547,6 +1561,7 @@ const CSS = `
 
 .el-log-section-head { display: flex; align-items: center; justify-content: space-between; margin: 24px 0 12px; padding-top: 16px; border-top: 1px solid var(--el-border); }
 .el-log-form { background: var(--el-surface); border: 1px solid var(--el-border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+.el-form-hint-error { color: var(--el-danger); font-size: 12px; font-weight: 600; margin: 4px 0 8px; text-align: right; }
 .el-log-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 .el-log-table-wrap { overflow-x: auto; border: 1px solid var(--el-border); border-radius: 8px; }
 .el-log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
